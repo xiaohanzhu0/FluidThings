@@ -1,15 +1,17 @@
-% Easiest version: diagonal metric tensor, m11 only depends on x1,
+% Second version:  diagonal metric tensor, m11 only depends on x1,
 %                  m22 only depends on x2, unit square boundary,
-%                  
+%                  grid points x1 and x2 coordinates are solved in ONE
+%                  SYSTEM
 
 clear
 max_iter = 100;
 tolerance = 1e-6;
-epsilon = 0.0001; % Under-relaxation factor
+epsilon = 0.001; % Under-relaxation factor
 
 % Grid size
-Nx1 = 40;
-Nx2 = 40;
+Nx1 = 11;
+Nx2 = 11;
+N = Nx1*Nx2;
 
 % Equispaced computational coordinates
 s1 = linspace(0, 1, Nx1);
@@ -29,10 +31,11 @@ axis equal; hold off
 
 min_cost = Inf;
 for iter = 1:max_iter
-    [A1, A2, b1, b2] = AssembleLinearSystem(x1, x2, s1, s2);
+    [A, b] = AssembleLinearSystem(x1, x2, s1, s2);
+    x_star = A \ b;
 
-    x1_star = A1 \ b1;
-    x2_star = A2 \ b2;
+    x1_star = x_star(1:N);
+    x2_star = x_star(N+1:end);
 
     dx1 = reshape(x1_star, Nx1, Nx2) - x1;
     dx2 = reshape(x2_star, Nx1, Nx2) - x2;
@@ -53,56 +56,73 @@ end
 
 
 %%
-function [A1, A2, b1, b2] = AssembleLinearSystem(x1, x2, s1, s2)
+function [A, b] = AssembleLinearSystem(x1, x2, s1, s2)
     [Nx1, Nx2] = size(x1);
     N = Nx1*Nx2;
+    N_all = 2*N;
+
     sigma1 = 1 / Nx1;
     sigma2 = 1 / Nx2;
     [M11, M22] = M(x1, x2);
     [dM11dx1, dM22dx2] = dMdx(x1, x2);
     [dx1ds1, dx2ds2] = DCentral(x1, x2, s1, s2);
-    e = ones(N, 1);
+    [dx2ds1, dx1ds2] = DCentral(x2, x1, s1, s2);
 
-    % x direction: Define the 1D Laplacian operator matrix
-    L1D = spdiags([e -2*e e], [-Nx2,0,Nx2], N, N); % 1D Laplacian in x
-    A1 = -2*L1D.*M11(:)/sigma1;
+    % Assemble the stiffness matrix A
+    e = ones(N_all, 1);
+    L1D = spdiags([e -2*e e], [-Nx2,0,Nx2], N_all, N_all); % 1D Laplacian in s1
+    L2D = spdiags([e -2*e e], -1:1, N_all, N_all); % 1D Laplacian in s2
+    L = sigma1^2 * L1D + sigma2^2 * L2D;
+    Mii = [M11(:); M22(:)];
+    A = -2*L.*Mii;
 
-    % Modify rows corresponding to boundary points for Dirichlet conditions
-    % Find boundary indices
-    boundary = [1:Nx1, N-Nx1+1:N]; % Vertical boundary indices
-    boundary = unique(boundary);   % Remove duplicates
-    % Modify boundary rows
-    for idx = boundary
-        A1(idx, :) = 0;           % Zero out the row
-        A1(idx, idx) = 1;         % Set diagonal entry to 1
+    % For Dirichlet conditions, find boundary indices
+    vboundary = [1:Nx1, N-Nx1+1:N]; % Vertical boundary indices
+    for idx = vboundary
+        % For Dirichlet conditions
+        A(idx, :) = 0;           % Zero out the row
+        A(idx, idx) = 1;         % Set diagonal entry to 1
+
+        % For Neumann conditions, set dx2/ds1=0
+        sidx = idx+N;
+        if sidx-Nx2 >= N-Nx2; A(sidx, sidx-Nx2) = 0; end
+        if sidx+Nx2 <= N_all; A(sidx, sidx+Nx2) = 0; end
     end
 
-    b1 = dM11dx1.*(dx1ds1.^2);
+    hboundary = [1:Nx2:N, Nx1:Nx2:N]; % Horizontal boundary indices
+    for idx = hboundary
+        % For Dirichlet conditions
+        sidx = idx+N;
+        A(sidx, :) = 0;
+        A(sidx, sidx) = 1;
+
+        % For Neumann conditions, set dx1/ds2=0
+        if idx-1 >= 1; A(idx, idx-1) = 0; end
+        if idx+1 <= N; A(idx, idx+1) = 0; end
+    end
+
+    for idx = 1:N
+        % For Neumann conditions, set dx1/ds2=0
+        if idx-1 >= 1; A(idx, idx-1) = 0; end
+        if idx+1 <= N; A(idx, idx+1) = 0; end
+        % For Neumann conditions, set dx2/ds1=0
+        sidx = idx+N;
+        if sidx-Nx2 >= N-Nx2; A(sidx, sidx-Nx2) = 0; end
+        if sidx+Nx2 <= N_all; A(sidx, sidx+Nx2) = 0; end
+    end
+
+
+    % Assemble the vector b
+    b1 = dM11dx1.* ((dx1ds1.^2)*sigma1^2 + (dx1ds2.^2)*sigma2^2);
     % Apply x1=0 and x1=1 to the left and right boundary
     b1(:,1) = 0;
     b1(:,end) = 1;
-    b1 = b1(:);
 
-
-
-    % y direction
-    L2D = spdiags([e -2*e e], -1:1, N, N); % 1D Laplacian in y
-    A2 = -2*L2D.*M22(:)/sigma2;
-
-    boundary = [1:Nx2:N, Nx1:Nx2:N]; % Horizontal boundary indices
-    boundary = unique(boundary);
-
-    % Modify boundary rows
-    for idx = boundary
-        A2(idx, :) = 0;           % Zero out the row
-        A2(idx, idx) = 1;         % Set diagonal entry to 1
-    end
-
-    b2 = dM22dx2.*(dx2ds2.^2);
+    b2 = dM22dx2.* ((dx2ds1.^2)*sigma1^2 + (dx2ds2.^2)*sigma2^2);
     % Apply x2=0 and x2=1 to the top and bottom boundary
     b2(1,:) = 0;
     b2(end,:) = 1;
-    b2 = b2(:);
+    b = [b1(:); b2(:)];
 end
 
 function [M11, M22] = M(x1, x2)
@@ -126,7 +146,7 @@ function L = cost(x1, x2, s1, s2)
     L = norm(L1(:)+L2(:), 1) / (Nx1*Nx2);
 end
 
-% Current works for dxds and dMdx
+% Current works for dxds
 function [dx1ds1, dx2ds2] = DCentral(x1, x2, s1, s2)
     dx2ds2 = zeros(size(x2));
     dx2ds2(2:end-1,:) = (x2(3:end,:)-x2(1:end-2,:)) ./ (s2(3:end,:)-s2(1:end-2,:));
