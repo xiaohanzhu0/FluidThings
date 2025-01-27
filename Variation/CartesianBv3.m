@@ -18,8 +18,9 @@ epsilon = 0.00002; % Under-relaxation factor
 
 % Grid size
 Nx1 = 40;
-Nx2 = 40;
+Nx2 = 20;
 N = Nx1*Nx2;
+id = GetBoundaryIndex(Nx1, Nx2);
 
 % Equispaced computational coordinates
 s1 = linspace(0, 1, Nx1);
@@ -34,11 +35,14 @@ x2 = s2;
 plot(x1, x2, 'k'); hold on; plot(x1', x2', 'k');
 title(title_name); xlim([0,1]); ylim([0,1]);
 axis equal; hold off
-exportgraphics(gcf, gif_name);
+if make_gif; exportgraphics(gcf, gif_name); end
 
 [M11, M22] = M(x1, x2, problem);
 
 min_cost = Inf;
+
+
+
 for iter = 1:max_iter
     [A, b] = AssembleLinearSystem(x1, x2, s1, s2, problem);
     x_star = A \ b;
@@ -46,8 +50,8 @@ for iter = 1:max_iter
     x1_star = x_star(1:N);
     x2_star = x_star(N+1:end);
 
-    dx1 = reshape(x1_star, Nx1, Nx2) - x1;
-    dx2 = reshape(x2_star, Nx1, Nx2) - x2;
+    dx1 = reshape(x1_star, Nx2, Nx1) - x1;
+    dx2 = reshape(x2_star, Nx2, Nx1) - x2;
 
     % Check convergence
     cost = Cost(x1, x2, s1, s2, problem);
@@ -63,7 +67,7 @@ for iter = 1:max_iter
     title(title_name); xlim([0,1]); ylim([0,1]);
     axis equal; hold off;
     pause(pause_time);
-    exportgraphics(gcf, gif_name, Append=true);
+    if make_gif; exportgraphics(gcf, gif_name, Append=true); end
 end
 
 
@@ -117,7 +121,6 @@ function [A, b] = AssembleLinearSystem(x1, x2, s1, s2, problem)
         A(sidx, :) = 0;
         A(sidx, sidx) = 1;
     end
-
 
     % Assemble the vector b
     b1 = dM11dx1.* ((dx1ds1.^2)*sigma1^2 + (dx1ds2.^2)*sigma2^2);
