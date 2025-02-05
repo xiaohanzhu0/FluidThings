@@ -20,8 +20,23 @@
               "icon": "lucide-file",
               "title": "Document"
             }
+          },
+          {
+            "id": "62f5b5e1a430697c",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Variation/Documents.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Documents"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -162,8 +177,21 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "f58e2569eb11259f",
+  "active": "62f5b5e1a430697c",
   "lastOpenFiles": [
+    "Variation/Notes.pdf",
+    "Variation/ExampleApproxMatrix.png",
+    "Variation/ExampleAlterMatrix.png",
+    "Variation/MatrixSparcity.png",
+    "Variation/outputs/example22.gif",
+    "Variation/outputs/example21.gif",
+    "Variation/outputs/example12.gif",
+    "Variation/example11.gif",
+    "Variation/outputs/example11.gif",
+    "Variation/example2.gif",
+    "Variation/example1.gif",
+    "Variation/Documents.md",
+    "Airfoil_TFI/Document.md",
     "Variation/CartesianB.m",
     "Variation/untitled.m",
     "Variation/FixedPointsExample.asv",
@@ -171,16 +199,9 @@
     "Variation",
     "New Folder",
     "Airfoil_TFI.zip",
-    "Airfoil_TFI/BiLinear_nonequispaced.png",
-    "Airfoil_TFI/Document.md",
-    "Airfoil_TFI/BiLinear_curved_nonequispaced.png",
-    "Airfoil_TFI/BiLinear_curved.png",
     "Airfoil_TFI/BiLinear.asv",
     "Airfoil_TFI/demonstration.pdf",
-    "Airfoil_TFI/BiLinear.png",
-    "Airfoil_TFI/UniLinear.png",
     "Test.md",
-    "Airfoil_TFI/BiLinear.mat",
-    "Airfoil_TFI/UniLinear.mat"
+    "Airfoil_TFI/BiLinear.mat"
   ]
 }

@@ -1,21 +1,21 @@
 clear
 
 addpath('./','./utils')
-animation = 1;
+animation = 0;
 pause_time = 0;
-make_gif = 1;
-problem = 1;
-method = 1;
-gif_name = 'example11.gif';
-title_name = 'Cartesian metric, Alternative Cost function';
+make_gif = 0;
+problem = 2;
+method = 2;
+gif_name = 'example21.gif';
+title_name = 'Curved metric, Alternative Cost function';
 
 max_iter = 100;
 tolerance = 1e-6;
 epsilon = 0.2; % Under-relaxation factor
 
 % Grid size
-Nx1 = 40;
-Nx2 = 40;
+Nx1 = 5;
+Nx2 = 5;
 N = Nx1*Nx2;
 
 % Equispaced computational coordinates
@@ -81,11 +81,11 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, s1, s2, problem, method)
     sigma2 = 1 / Nx2;
     [M11, M22] = M(x1, x2, problem);
     [dM11dx1, dM11dx2, dM22dx1, dM22dx2] = dMdx(x1, x2, problem);
-    [dx1ds1, dx2ds2] = DCentral(x1, x2, s1, s2);
-    [dx2ds1, dx1ds2] = DCentral(x2, x1, s1, s2);
+    [dx1ds1, dx2ds2] = DCentral(x1, x2, sigma1, sigma2);
+    [dx2ds1, dx1ds2] = DCentral(x2, x1, sigma1, sigma2);
     id = GetIndex(Nx1, Nx2);
 
-    A_orth = AssembleOrtho(dx1ds1, dx1ds2, dx2ds1, dx2ds2, s1, s2, id);
+    A_orth = AssembleOrtho(dx1ds1, dx1ds2, dx2ds1, dx2ds2, si, s2, id);
     A = sparse(N_all, N_all);
     
     if method == 2 % For approximate cost function
@@ -244,7 +244,7 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, s1, s2, problem, method)
     res = norm(A*[x1(:);x2(:)] - b);
 end
 
-function A_orth = AssembleOrtho(dx1ds1, dx1ds2, dx2ds1, dx2ds2, s1, s2, id)
+function A_orth = AssembleOrtho(dx1ds1, dx1ds2, dx2ds1, dx2ds2, sigma1, sigma2, id)
     [Nx1, Nx2] = size(dx1ds1);
     N = Nx1*Nx2;
     N_all = N*2;
@@ -255,7 +255,7 @@ function A_orth = AssembleOrtho(dx1ds1, dx1ds2, dx2ds1, dx2ds2, s1, s2, id)
     sigma2 = 1 / Nx2;
 
     D = dx1ds1.*dx1ds2 + dx2ds1.*dx2ds2;
-    [dDds1, dDds2] = DCentral(D, D, s1, s2);
+    [dDds1, dDds2] = DCentral(D, D, sigma1, sigma2);
     
     for i = [id.inner, N+id.inner]
         A_orth1(i,i+Nx2+1) = 1/(4*sigma1*sigma2);
