@@ -9,7 +9,7 @@ function [dM11dx1, dM11dx2, dM22dx1, dM22dx2] = dMdx(x1, x2, problem)
         dM11dx2 = 1200*pi*sin(2*pi*x1).*cos(2*pi*x2);
         dM22dx1 = -1200*pi*cos(2*pi*x1).*sin(2*pi*x2);
         dM22dx2 = -1200*pi*sin(2*pi*x1).*cos(2*pi*x2);
-    elseif problem == 3
+    elseif ismember(problem, [3,4])
         [Nx2, Nx1] = size(x1);
         dM11dx1 = zeros(Nx2, Nx1);
         dM11dx2 = zeros(Nx2, Nx1);

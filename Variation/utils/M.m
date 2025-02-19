@@ -9,5 +9,9 @@ function [M11, M22] = M(x1, x2, problem)
         [Nx2, Nx1] = size(x1);
         M11 = 2000*ones(Nx2, Nx1);
         M22 = 2000*ones(Nx2, Nx1);
+    elseif problem == 4
+        [Nx2, Nx1] = size(x1);
+        M11 = 400*ones(Nx2, Nx1);
+        M22 = 400*ones(Nx2, Nx1);
     end
 end
