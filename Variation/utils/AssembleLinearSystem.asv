@@ -1,4 +1,4 @@
-function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
+function [A, b, res] = AssembleLinearSystem(x1, x2, problem, method)
     [Nx2, Nx1] = size(x1);
     N = Nx1*Nx2;
     N_all = 2*N;
@@ -6,9 +6,8 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
     sigma1 = 1 / Nx1;
     sigma2 = 1 / Nx2;
 
-    M11=M.M11; M22=M.M22; 
-    dM11dx1=M.dM11dx1; dM11dx2=M.dM11dx2; dM22dx1=M.dM22dx1; dM22dx2=M.dM22dx2;
-
+    [M11, M22] = M(x1, x2, problem);
+    [dM11dx1, dM11dx2, dM22dx1, dM22dx2] = dMdx(x1, x2, problem);
     [dx1ds1, dx2ds2] = DCentral(x1, x2, sigma1, sigma2);
     [dx2ds1, dx1ds2] = DCentral(x2, x1, sigma1, sigma2);
     id = GetIndex(Nx1, Nx2);
@@ -226,4 +225,3 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
 
     res = norm(A*[x1(:);x2(:)] - b);
 end
-
