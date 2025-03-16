@@ -3,7 +3,7 @@ addpath('./','./utils')
 animation = 1;
 pause_time = 0.0;
 make_gif = 0;
-problem = 3;
+problem = 1;
 method = 1;
 gif_name = 'example13.gif';
 title_name = 'Curved boundary, Curved metric, Alternative Cost function';
@@ -11,8 +11,8 @@ save_output = 0;
 march_type = 'regular';
 
 C = 0.1;
-Nx1 = 50;
-Nx2 = 50;
+Nx1 = 200;
+Nx2 = 200;
 max_iter = 200;
 tolerance = 1e-6;
 epsilon = 0.1; % Under-relaxation factor

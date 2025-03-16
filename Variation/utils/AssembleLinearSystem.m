@@ -1,5 +1,4 @@
 function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
-    tic
     [Nx2, Nx1] = size(x1);
     N = Nx1*Nx2;
     N_all = 2*N;
@@ -15,7 +14,6 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
     id = GetIndex(Nx1, Nx2);
 
     A = sparse(N_all, N_all);
-    toc
     
     if method == 2 % For approximate cost function
         % coef(k,alpha,i)
@@ -121,7 +119,7 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
              sigma2^4 * M22.*dx2ds2.*(b_aux3.*dx1ds2.^2 + b_aux4.*dx2ds2.^2);
 
     elseif method == 1 % For alternative cost function
-        
+        tic
         t_bottom = GetBoundaryTangent(x1(1,:), x2(1,:), 1);
         t_top = GetBoundaryTangent(x1(end,:), x2(end,:), 1);
         t_left = GetBoundaryTangent(x1(:,1), x2(:,1), 1);
@@ -132,88 +130,58 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
         n_left = [-t_left(2,:); t_left(1,:)];
         n_right = [-t_right(2,:); t_right(1,:)];
         
-        %for i = [id.inner, N+id.inner]  % N+id.inner for the second component
-        %    A(i,i) = -4;
-        %    A(i,i-1) = 1;
-        %    A(i,i+1) = 1;
-        %    A(i,i-Nx2) = 1;
-        %    A(i,i+Nx2) = 1;
-        %end
         e = ones(N,1);
         L = spdiags([e, e, -4*e, e, e], [-Nx2, -1, 0, 1, Nx2], N, N);
         A = blkdiag(L, L);
         Mii = [M11(:); M22(:)];
         A = -2*A.*Mii;
+
+        A(id.l,:) = 0;
+        A(sub2ind(size(A), id.l, id.l))   = n_left(1,2:end-1);
+        A(sub2ind(size(A), id.l, N+id.l)) = n_left(2,2:end-1);
+        A(id.l+N,:) = 0;
+        A(sub2ind(size(A), N+id.l, id.l)) = t_left(1,2:end-1);
+        A(sub2ind(size(A), N+id.l, N+id.l)) = t_left(2,2:end-1);
+        A(sub2ind(size(A), N+id.l, 1*Nx2+id.l)) = -4/3*t_left(1,2:end-1);
+        A(sub2ind(size(A), N+id.l, N+1*Nx2+id.l)) = -4/3*t_left(2,2:end-1);
+        A(sub2ind(size(A), N+id.l, 2*Nx2+id.l)) = 1/3*t_left(1,2:end-1);
+        A(sub2ind(size(A), N+id.l, N+2*Nx2+id.l)) = 1/3*t_left(2,2:end-1);
         
-        j = 2;
-        for i = id.l
-            A(i,:) = 0;
-            A(i,i) = n_left(1,j);
-            A(i,i+N) = n_left(2,j);
+        A(id.r,:) = 0;
+        A(sub2ind(size(A), id.r, id.r))   = n_right(1,2:end-1);
+        A(sub2ind(size(A), id.r, N+id.r)) = n_right(2,2:end-1);
+        A(id.r+N,:) = 0;
+        A(sub2ind(size(A), N+id.r, id.r)) = t_right(1,2:end-1);
+        A(sub2ind(size(A), N+id.r, N+id.r)) = t_right(2,2:end-1);
+        A(sub2ind(size(A), N+id.r, -1*Nx2+id.r)) = -4/3*t_right(1,2:end-1);
+        A(sub2ind(size(A), N+id.r, N-1*Nx2+id.r)) = -4/3*t_right(2,2:end-1);
+        A(sub2ind(size(A), N+id.r, -2*Nx2+id.r)) = 1/3*t_right(1,2:end-1);
+        A(sub2ind(size(A), N+id.r, N-2*Nx2+id.r)) = 1/3*t_right(2,2:end-1);
 
-            A(i+N,:) = 0;
-            A(i+N,i) = t_left(1,j);
-            A(i+N,i+N) = t_left(2,j);
-            A(i+N,i+1*Nx2) = -4/3*t_left(1,j);
-            A(i+N,i+N+1*Nx2) = -4/3*t_left(2,j);
-            A(i+N,i+2*Nx2) = 1/3*t_left(1,j);
-            A(i+N,i+N+2*Nx2) = 1/3*t_left(2,j);
-            j = j+1;
-        end
+        A(id.b,:) = 0;
+        A(sub2ind(size(A), id.b, id.b))   = n_bottom(1,2:end-1);
+        A(sub2ind(size(A), id.b, N+id.b)) = n_bottom(2,2:end-1);
+        A(id.b+N,:) = 0;
+        A(sub2ind(size(A), N+id.b, id.b)) = t_bottom(1,2:end-1);
+        A(sub2ind(size(A), N+id.b, N+id.b)) = t_bottom(2,2:end-1);
+        A(sub2ind(size(A), N+id.b, 1+id.b)) = -4/3*t_bottom(1,2:end-1);
+        A(sub2ind(size(A), N+id.b, N+1+id.b)) = -4/3*t_bottom(2,2:end-1);
+        A(sub2ind(size(A), N+id.b, 2+id.b)) = 1/3*t_bottom(1,2:end-1);
+        A(sub2ind(size(A), N+id.b, N+2+id.b)) = 1/3*t_bottom(2,2:end-1);
 
-        j = 2;
-        for i = id.r
-            A(i,:) = 0;
-            A(i,i) = n_right(1,j);
-            A(i,i+N) = n_right(2,j);
-
-            A(i+N,:) = 0;
-            A(i+N,i) = t_right(1,j);
-            A(i+N,i+N) = t_right(2,j);
-            A(i+N,i-1*Nx2) = -4/3*t_right(1,j);
-            A(i+N,i+N-1*Nx2) = -4/3*t_right(2,j);
-            A(i+N,i-2*Nx2) = 1/3*t_right(1,j);
-            A(i+N,i+N-2*Nx2) = 1/3*t_right(2,j);
-            j = j+1;
-        end
-
-        j = 2;
-        for i = id.b
-            A(i,:) = 0;
-            A(i,i) = n_bottom(1,j);
-            A(i,i+N) = n_bottom(2,j);
-
-            A(i+N,:) = 0;
-            A(i+N,i) = t_bottom(1,j);
-            A(i+N,i+N) = t_bottom(2,j);
-            A(i+N,i+1) = -4/3*t_bottom(1,j);
-            A(i+N,i+N+1) = -4/3*t_bottom(2,j);
-            A(i+N,i+2) = 1/3*t_bottom(1,j);
-            A(i+N,i+N+2) = 1/3*t_bottom(2,j);
-            j = j+1;
-        end
-
-        j = 2;
-        for i = id.t
-            A(i,:) = 0;
-            A(i,i) = n_top(1,j);
-            A(i,i+N) = n_top(2,j);
-
-            A(i+N,:) = 0;
-            A(i+N,i) = t_top(1,j);
-            A(i+N,i+N) = t_top(2,j);
-            A(i+N,i-1) = -4/3*t_top(1,j);
-            A(i+N,i+N-1) = -4/3*t_top(2,j);
-            A(i+N,i-2) = 1/3*t_top(1,j);
-            A(i+N,i+N-2) = 1/3*t_top(2,j);
-            j = j+1;
-        end
+        A(id.t,:) = 0;
+        A(sub2ind(size(A), id.t, id.t))   = n_top(1,2:end-1);
+        A(sub2ind(size(A), id.t, N+id.t)) = n_top(2,2:end-1);
+        A(id.t+N,:) = 0;
+        A(sub2ind(size(A), N+id.t, id.t)) = t_top(1,2:end-1);
+        A(sub2ind(size(A), N+id.t, N+id.t)) = t_top(2,2:end-1);
+        A(sub2ind(size(A), N+id.t, -1+id.t)) = -4/3*t_top(1,2:end-1);
+        A(sub2ind(size(A), N+id.t, N-1+id.t)) = -4/3*t_top(2,2:end-1);
+        A(sub2ind(size(A), N+id.t, -2+id.t)) = 1/3*t_top(1,2:end-1);
+        A(sub2ind(size(A), N+id.t, N-2+id.t)) = 1/3*t_top(2,2:end-1);
         
         for i = id.corner; A(i, :) = 0; A(i, i) = 1; end
         for i = N+id.corner; A(i, :) = 0; A(i, i) = 1; end
-
-        %A(id.corner, :) = 0; A(id.corner, id.corner) = 1;
-        %A(N+id.corner, :) = 0; A(N+id.corner, N+id.corner) = 1;
 
         
         % Assemble the interior vector b
@@ -238,5 +206,6 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
     b = [b1(:); b2(:)];
 
     res = norm(A*[x1(:);x2(:)] - b);
+    toc
 end
 
