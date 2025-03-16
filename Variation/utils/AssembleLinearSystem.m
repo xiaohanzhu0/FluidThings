@@ -1,4 +1,5 @@
 function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
+    tic
     [Nx2, Nx1] = size(x1);
     N = Nx1*Nx2;
     N_all = 2*N;
@@ -14,6 +15,7 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
     id = GetIndex(Nx1, Nx2);
 
     A = sparse(N_all, N_all);
+    toc
     
     if method == 2 % For approximate cost function
         % coef(k,alpha,i)
@@ -119,32 +121,37 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
              sigma2^4 * M22.*dx2ds2.*(b_aux3.*dx1ds2.^2 + b_aux4.*dx2ds2.^2);
 
     elseif method == 1 % For alternative cost function
-        t_bottom = GetBoundaryTangent(x1(1,:), x2(1,:));
-        t_top = GetBoundaryTangent(x1(end,:), x2(end,:));
-        t_left = GetBoundaryTangent(x1(:,1), x2(:,1));
-        t_right = GetBoundaryTangent(x1(:,end), x2(:,end));
+        
+        t_bottom = GetBoundaryTangent(x1(1,:), x2(1,:), 1);
+        t_top = GetBoundaryTangent(x1(end,:), x2(end,:), 1);
+        t_left = GetBoundaryTangent(x1(:,1), x2(:,1), 1);
+        t_right = GetBoundaryTangent(x1(:,end), x2(:,end), 1);
 
         n_bottom = [-t_bottom(2,:); t_bottom(1,:)];
         n_top = [-t_top(2,:); t_top(1,:)];
         n_left = [-t_left(2,:); t_left(1,:)];
         n_right = [-t_right(2,:); t_right(1,:)];
-
-        for i = [id.inner, N+id.inner]  % N+id.inner for the second component
-            A(i,i) = -4;
-            A(i,i-1) = 1;
-            A(i,i+1) = 1;
-            A(i,i-Nx2) = 1;
-            A(i,i+Nx2) = 1;
-        end
-
+        
+        %for i = [id.inner, N+id.inner]  % N+id.inner for the second component
+        %    A(i,i) = -4;
+        %    A(i,i-1) = 1;
+        %    A(i,i+1) = 1;
+        %    A(i,i-Nx2) = 1;
+        %    A(i,i+Nx2) = 1;
+        %end
+        e = ones(N,1);
+        L = spdiags([e, e, -4*e, e, e], [-Nx2, -1, 0, 1, Nx2], N, N);
+        A = blkdiag(L, L);
         Mii = [M11(:); M22(:)];
         A = -2*A.*Mii;
-    
+        
         j = 2;
         for i = id.l
+            A(i,:) = 0;
             A(i,i) = n_left(1,j);
             A(i,i+N) = n_left(2,j);
 
+            A(i+N,:) = 0;
             A(i+N,i) = t_left(1,j);
             A(i+N,i+N) = t_left(2,j);
             A(i+N,i+1*Nx2) = -4/3*t_left(1,j);
@@ -152,14 +159,15 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
             A(i+N,i+2*Nx2) = 1/3*t_left(1,j);
             A(i+N,i+N+2*Nx2) = 1/3*t_left(2,j);
             j = j+1;
-            %x1(:,1).*n_left(1,:) + x2(:,1).*n_left(2,:)
         end
 
         j = 2;
         for i = id.r
+            A(i,:) = 0;
             A(i,i) = n_right(1,j);
             A(i,i+N) = n_right(2,j);
 
+            A(i+N,:) = 0;
             A(i+N,i) = t_right(1,j);
             A(i+N,i+N) = t_right(2,j);
             A(i+N,i-1*Nx2) = -4/3*t_right(1,j);
@@ -171,9 +179,11 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
 
         j = 2;
         for i = id.b
+            A(i,:) = 0;
             A(i,i) = n_bottom(1,j);
             A(i,i+N) = n_bottom(2,j);
 
+            A(i+N,:) = 0;
             A(i+N,i) = t_bottom(1,j);
             A(i+N,i+N) = t_bottom(2,j);
             A(i+N,i+1) = -4/3*t_bottom(1,j);
@@ -185,9 +195,11 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
 
         j = 2;
         for i = id.t
+            A(i,:) = 0;
             A(i,i) = n_top(1,j);
             A(i,i+N) = n_top(2,j);
 
+            A(i+N,:) = 0;
             A(i+N,i) = t_top(1,j);
             A(i+N,i+N) = t_top(2,j);
             A(i+N,i-1) = -4/3*t_top(1,j);
@@ -196,10 +208,14 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
             A(i+N,i+N-2) = 1/3*t_top(2,j);
             j = j+1;
         end
+        
+        for i = id.corner; A(i, :) = 0; A(i, i) = 1; end
+        for i = N+id.corner; A(i, :) = 0; A(i, i) = 1; end
 
-        for i = id.corner; A(i, i) = 1; end
-        for i = N+id.corner; A(i, i) = 1; end
-    
+        %A(id.corner, :) = 0; A(id.corner, id.corner) = 1;
+        %A(N+id.corner, :) = 0; A(N+id.corner, N+id.corner) = 1;
+
+        
         % Assemble the interior vector b
         b1 = dM11dx1.* ((dx1ds1.^2)*sigma1^2 + (dx1ds2.^2)*sigma2^2);
         b1 = b1 + 2*dM11dx2.*(dx2ds1.*dx1ds1*sigma1^2 + dx2ds2.*dx1ds2*sigma2^2);
@@ -219,9 +235,6 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
     % RHS changes due to Neumann on boundary
     b2(:,1) = 0; b2(:,end) = 0; b2(1,:) = 0; b2(end,:) = 0;
 
-    % Fix cornors in place
-    b1(1,1)=0; b1(1,end)=1; b1(end,1)=0; b1(end,end)=1;
-    b2(1,1)=0; b2(1,end)=0; b2(end,1)=1; b2(end,end)=1;
     b = [b1(:); b2(:)];
 
     res = norm(A*[x1(:);x2(:)] - b);

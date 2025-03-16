@@ -16,4 +16,5 @@ function id = GetIndex(Nx1, Nx2)
     id.r = setdiff(id.r, id.corner);
     id.b = setdiff(id.b, id.corner);
     id.t = setdiff(id.t, id.corner);
+    id.boundary = unique([id.l, id.r, id.b, id.t]);
 end

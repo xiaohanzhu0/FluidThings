@@ -1,4 +1,28 @@
 
+## Mar 14 Update:
+
+Idea:
+Iterative method bicgstabl with ilu preconditioner: 100\*100 grid --> 20,000\*20,000 matrix system converges in a couple of iterations. 
+
+If we can get rid of x dependency of matrix A, then we can do just ilu once and solve all the iteration almost for free. 
+
+Without preconditioner: Takes more than 10 sec 5e-4 residual 
+With preconditioner: Takes about 0.4 sec to achieve 1e-6 residual
+
+
+
+## Mar 7 Update: Better iteration
+$$x^{n+1}=x^n+\omega \delta x^{**},\;\;\;\;\;\; \begin{cases}\mathcal{A}(\tilde{x}^{n+1}) (\tilde{x}^{n+1}+\delta x^{**})=\mathcal{R}(\tilde{x}^{n+1}) & \text{somehow works better}\\
+\mathcal{A}(\tilde{x}^{n+1}) (x^n+\delta x^{**})=\mathcal{R}(\tilde{x}^{n+1})
+\end{cases}$$
+Where $$\tilde{x}^{n+1}=x^n+\omega \delta x^*,\;\;\;\;\;\;\mathcal{A}(x^n)(x^n+\delta x^*) = \mathcal{R}(x^n)$$
+
+Make metric tensor more variant in magnitude:
+$$M_{ii} = 40000(1+15Cx_i)^{-2}$$
+![[convergence_comparison_1.png]]
+![[convergence_comparison_2.png]]
+![[convergence_comparison_3.png]]
+
 ## Feb 13 Update: Update Correction on Curved Boundary
 For a curved boundary, allowing the boundary points to slide on the tangent plane— a local approximation of the actual boundary—can introduce truncation errors. For smooth boundaries, this error is typically small. However, for boundaries with high curvature, the deviation of the boundary points from the actual boundary can be significant.
 

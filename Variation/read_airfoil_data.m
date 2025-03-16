@@ -26,6 +26,13 @@ end
 %% 
 for i=1:3
     figure()
+    f = surf(m.x_metric, m.y_metric, m.metric(:,:,i));
+    set(f, 'EdgeColor', 'none'); colorbar;
+    title(strcat(m_component(i),', log(1+abs(Mii)) scaled'));
+end
+%% 
+for i=1:3
+    figure()
     f = pcolor(m.x_metric, m.y_metric, log(1+abs(m.metric(:,:,i))));
     set(f, 'EdgeColor', 'none'); colorbar;
     title(strcat(m_component(i),', log(1+abs(Mii)) scaled'));
