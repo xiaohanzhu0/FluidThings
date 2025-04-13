@@ -1,6 +1,5 @@
 function id = GetIndex(Nx1, Nx2)
     N = Nx1*Nx2;
-    id.all = 1:N;
     id.l = 1:Nx2;
     id.r = N-Nx2+1:N;
     id.b = 1:Nx2:N;
@@ -11,7 +10,7 @@ function id = GetIndex(Nx1, Nx2)
     id.rt = N;
     id.corner = [id.lb, id.lt, id.rb, id.rt];
 
-    id.inner = setdiff(id.all, [id.l, id.r, id.b, id.t]);
+    id.inner = setdiff(1:N, [id.l, id.r, id.b, id.t]);
     id.l = setdiff(id.l, id.corner);
     id.r = setdiff(id.r, id.corner);
     id.b = setdiff(id.b, id.corner);

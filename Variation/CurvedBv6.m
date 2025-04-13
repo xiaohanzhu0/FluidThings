@@ -1,21 +1,22 @@
 clear
 addpath('./','./utils')
 animation = 1;
-pause_time = 0.0;
+pause_time = 0;
 make_gif = 0;
 problem = 1;
-method = 1;
+param.method = 1;
+param.nonlinear = 2;
 gif_name = 'example13.gif';
 title_name = 'Curved boundary, Curved metric, Alternative Cost function';
 save_output = 0;
 march_type = 'regular';
 
 C = 0.1;
-Nx1 = 200;
-Nx2 = 200;
+Nx1 = 50;
+Nx2 = 50;
 max_iter = 200;
 tolerance = 1e-6;
-epsilon = 0.1; % Under-relaxation factor
+epsilon = 0.3; % Under-relaxation factor
 
 % Grid size
 N = Nx1*Nx2;
@@ -59,10 +60,14 @@ end
 res_list = [];
 err_list = [];
 %%
-
-for iter = 1:100
+param.forDx = 0;
+M = GetM(x1, x2, M_type);
+[A, b, res] = AssembleLinearSystem(x1, x2, M, param);
+for iter = 1:200
     M = GetM(x1, x2, M_type);
-    [A, b, res] = AssembleLinearSystem(x1, x2, M, method);
+    res_old = res;
+
+    %[A, b, res] = AssembleLinearSystem(x1, x2, M, param);
     
     if strcmp(march_type, 'p-c')
         res = b - A*[x1(:);x2(:)];
@@ -81,35 +86,60 @@ for iter = 1:100
     end
     
     if strcmp(march_type, 'regular')
-        tic
-        x_star = A \ b;
-        toc
+        param.forDx = 0;
+        [A, b, o] = AssembleLinearSystem(x1, x2, M, param);
+        res = b - A*[x1(:);x2(:)];
 
-        [L, U, P, Q, D] = lu(A);
-        %tic
-        %x_star_ = Q * (U \ (D \ (L \ (P * b))));
-        %toc
+        param.forDx = 1;
+        [A, b, o] = AssembleLinearSystem(x1, x2, M, param);
 
-        x1_star = x_star(1:N);
-        x2_star = x_star(N+1:end);
-        dx1 = reshape(x1_star, Nx2, Nx1) - x1;
-        dx2 = reshape(x2_star, Nx2, Nx1) - x2;
+        err = A \ res;
+        dx1 = reshape(err(1:N), Nx2, Nx1);
+        dx2 = reshape(err(N+1:end), Nx2, Nx1);
+
+        res = abs(res(1:N)) + abs(res(N+1:end));
+        res = reshape(res, Nx2, Nx1);
+        res = res(2:end-1, 2:end-1);
+
         res_list = [res_list, norm(res)];
 
         dx1(1,1)=0; dx1(1,end)=0; dx1(end,1)=0; dx1(end,end)=0;
         dx2(1,1)=0; dx2(1,end)=0; dx2(end,1)=0; dx2(end,end)=0;
     
-        x1 = x1 + epsilon * dx1;
-        x2 = x2 + epsilon * dx2;
-        
+        x1 = x1 + epsilon*dx1;
+        x2 = x2 + epsilon*dx2;
     end
 
+    if strcmp(march_type, 'newton')
+        err = A \ (b-A*[x1(:);x2(:)]);
+        dx1 = reshape(err(1:N), Nx2, Nx1);
+        dx2 = reshape(err(N+1:end), Nx2, Nx1);
+        dx1(1,1)=0; dx1(1,end)=0; dx1(end,1)=0; dx1(end,end)=0;
+        dx2(1,1)=0; dx2(1,end)=0; dx2(end,1)=0; dx2(end,end)=0;
+        epsilon = 0.5;
+        x1_temp = x1 + epsilon * dx1;
+        x2_temp = x2 + epsilon * dx2;
+        [A, b, res] = AssembleLinearSystem(x1_temp, x2_temp, M, param);
+        res = norm(b - A*[x1_temp(:);x2_temp(:)]);
+        res_list = [res_list, norm(res)];
 
-    if problem == 1 || problem == 4 || problem == 5
+        while res > res_old
+            epsilon = epsilon/2;
+            x1_temp = x1 + epsilon * dx1;
+            x2_temp = x2 + epsilon * dx2;
+            [A, b, res] = AssembleLinearSystem(x1_temp, x2_temp, M, param);
+            res = norm(b - A*[x1_temp(:);x2_temp(:)]);
+        end
+        x1 = x1 + epsilon * dx1;
+        x2 = x2 + epsilon * dx2;
+    end
+
+    if problem == 0 || problem == 4 || problem == 5
         [x1, x2] = UpdateCorrection(x1, x2, x1_exact, x2_exact);
     end
     
     if animation == 1
+        figure(1)
         plot(x1, x2, 'k'); hold on; plot(x1', x2', 'k');
         title(title_name); xlim([0,1]); ylim([0,1]);
         %plot(s1, x1(20,:));  xlim([0,1]); ylim([-0.1,1]); grid on
@@ -120,7 +150,7 @@ for iter = 1:100
 end
 
 %%
-figure()
+figure(2)
 semilogy(res_list); hold on
 legend('Residual', 'Error');
 grid on

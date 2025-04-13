@@ -1,4 +1,4 @@
-function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
+function [A, b, res] = AssembleLinearSystem(x1, x2, M, param)
     [Nx2, Nx1] = size(x1);
     N = Nx1*Nx2;
     N_all = 2*N;
@@ -15,7 +15,7 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
 
     A = sparse(N_all, N_all);
     
-    if method == 2 % For approximate cost function
+    if param.method == 2 % For approximate cost function
         % coef(k,alpha,i)
         coef111 = -2*sigma1^2*M11.*dx1ds1.*M11.*dx1ds1; coef111 = coef111(:);
         coef112 = -2*sigma1^2*M11.*dx1ds1.*M22.*dx2ds1; coef112 = coef112(:);
@@ -118,8 +118,8 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
         b2 = sigma1^4 * M22.*dx2ds1.*(b_aux1.*dx1ds1.^2 + b_aux2.*dx2ds1.^2) + ...
              sigma2^4 * M22.*dx2ds2.*(b_aux3.*dx1ds2.^2 + b_aux4.*dx2ds2.^2);
 
-    elseif method == 1 % For alternative cost function
-        tic
+    elseif param.method == 1 % For alternative cost function
+        
         t_bottom = GetBoundaryTangent(x1(1,:), x2(1,:), 1);
         t_top = GetBoundaryTangent(x1(end,:), x2(end,:), 1);
         t_left = GetBoundaryTangent(x1(:,1), x2(:,1), 1);
@@ -129,13 +129,33 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
         n_top = [-t_top(2,:); t_top(1,:)];
         n_left = [-t_left(2,:); t_left(1,:)];
         n_right = [-t_right(2,:); t_right(1,:)];
-        
+
         e = ones(N,1);
         L = spdiags([e, e, -4*e, e, e], [-Nx2, -1, 0, 1, Nx2], N, N);
         A = blkdiag(L, L);
+
         Mii = [M11(:); M22(:)];
         A = -2*A.*Mii;
+        
+        % Do upwind bias for first derivative
+        if param.nonlinear == 2 || (param.nonlinear == 3 && param.forDx == 1)
+            UP = sparse(N_all, N_all);
+            UP1 = spdiags([-e, e], [0, Nx2], N, N);
+            UP2 = spdiags([-e, e], [0, 1], N, N);
+    
+            UP(1:N,1:N) = -sigma1*UP1.*dx1ds1(:).*dM11dx1(:);
+            UP(N+1:end,N+1:end) = -sigma2*UP2.*dx2ds2(:).*dM22dx2(:);
 
+            if  param.nonlinear == 3 && param.forDx == 1
+                UP = UP * 2;
+            end
+
+            A = A + UP;
+        end
+
+        %A(id.inner,:) = -2*A(id.inner,:).*Mii(id.inner,:);
+        %A(N+id.inner,:) = -2*A(N+id.inner,:).*Mii(N+id.inner,:);
+        
         A(id.l,:) = 0;
         A(sub2ind(size(A), id.l, id.l))   = n_left(1,2:end-1);
         A(sub2ind(size(A), id.l, N+id.l)) = n_left(2,2:end-1);
@@ -183,13 +203,18 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
         for i = id.corner; A(i, :) = 0; A(i, i) = 1; end
         for i = N+id.corner; A(i, :) = 0; A(i, i) = 1; end
 
-        
         % Assemble the interior vector b
-        b1 = dM11dx1.* ((dx1ds1.^2)*sigma1^2 + (dx1ds2.^2)*sigma2^2);
+        b1 = 0;
+        if param.nonlinear == 1 || (param.nonlinear == 3 && param.forDx == 0)
+            b1 = b1 + dM11dx1.* ((dx1ds1.^2)*sigma1^2 + (dx1ds2.^2)*sigma2^2);
+        end
         b1 = b1 + 2*dM11dx2.*(dx2ds1.*dx1ds1*sigma1^2 + dx2ds2.*dx1ds2*sigma2^2);
         b1 = b1 - dM22dx1.*(dx2ds1.^2*sigma1^2 + dx2ds2.^2*sigma2^2);
     
-        b2 = dM22dx2.* ((dx2ds1.^2)*sigma1^2 + (dx2ds2.^2)*sigma2^2);
+        b2 = 0;
+        if param.nonlinear == 1 || (param.nonlinear == 3 && param.forDx == 0)
+            b2 = b2 + dM22dx2.* ((dx2ds1.^2)*sigma1^2 + (dx2ds2.^2)*sigma2^2);
+        end
         b2 = b2 + 2*dM22dx1.*(dx1ds1.*dx2ds1*sigma1^2 + dx1ds2.*dx2ds2*sigma2^2);
         b2 = b2 - dM11dx2.*(dx1ds1.^2*sigma1^2 + dx1ds2.^2*sigma2^2);
     end
@@ -206,6 +231,5 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, method)
     b = [b1(:); b2(:)];
 
     res = norm(A*[x1(:);x2(:)] - b);
-    toc
 end
 

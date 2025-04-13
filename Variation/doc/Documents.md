@@ -1,3 +1,29 @@
+![[Inbox 7.pdf]]
+
+Upwind is used for those first order derivative discretizations.
+
+
+![[omega=0.1,C=1,Nx1=Nx2=50.png]]
+![[omega=0.1,C=2,Nx1=Nx2=50.png]]
+![[omega=0.1,C=10,Nx1=Nx2=50.png]]
+
+
+
+Ok, last week, I thought that we can use Newton's method to solve the system instead. Now, what I found was the method mentioned in the paper can be though as Newton's method based on linear approximation of the original equation. Initially, we have:
+
+$$F(x) = \sum_{\alpha=1}^3 A_{kj,\alpha}(x) D_{\alpha \alpha} x_k + R(x)=0$$
+Then the Jacobian is:
+$$J(x)_{km} = \frac{\delta F_k}{\delta x_m} = \sum_{\alpha=1}^3 \frac{\partial A_{kj,\alpha}(x)}{\partial x_m} D_{\alpha \alpha} x_k + A_{kj,\alpha}(x) D_{\alpha \alpha} \delta_{km} + \frac{\partial R(x)_k}{\partial x_m}$$
+If we are assuming $\frac{\partial A_{kj,\alpha}(x)}{\partial x_m}$ and $\frac{\partial R(x)_k}{\partial x_m}$ is small (which is not true for case 1, and is exactly 0 for other cases), then the Jacobian is:
+$$J(x)_{km} \approx \frac{\delta F_k}{\delta x_m} = \sum_{\alpha=1}^3 A_{kj,\alpha}(x) D_{\alpha \alpha} \delta_{km} $$
+Then Newton's method gives:
+$$x^{n+1} = x^n - \frac{F(x^n)}{J(x^n)}$$
+Or:
+$$J(x^n)\Delta x^n = -F(x^n)$$
+Which turns out to be our iterations:
+$$\sum_{\alpha=1}^3 A_{kj,\alpha}(x^n) D_{\alpha \alpha} \Delta x^n = -\text{Res}(x^n)$$
+I also tried to use Damped Newton's method. It stops after some iterations because we already achieved minimum residual along the line search without residual converging to zero. So, I think the ultimate criminal is that the approximation is indeed not accurate enough: we need to introduce additional variational terms.
+
 
 ## Mar 14 Update:
 
