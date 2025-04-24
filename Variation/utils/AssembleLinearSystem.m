@@ -142,6 +142,8 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, param)
             UP = sparse(N_all, N_all);
             UP1 = spdiags([-e, e], [0, Nx2], N, N);
             UP2 = spdiags([-e, e], [0, 1], N, N);
+            %UP1 = spdiags([-e/2, e/2], [-Nx2, Nx2], N, N);
+            %UP2 = spdiags([-e/2, e/2], [-1, 1], N, N);
     
             UP(1:N,1:N) = -sigma1*UP1.*dx1ds1(:).*dM11dx1(:);
             UP(N+1:end,N+1:end) = -sigma2*UP2.*dx2ds2(:).*dM22dx2(:);
