@@ -139,20 +139,21 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, param)
         
         % Do upwind bias for first derivative
         if param.nonlinear == 2 || (param.nonlinear == 3 && param.forDx == 1)
-            UP = sparse(N_all, N_all);
-            UP1 = spdiags([-e, e], [0, Nx2], N, N);
-            UP2 = spdiags([-e, e], [0, 1], N, N);
-            %UP1 = spdiags([-e/2, e/2], [-Nx2, Nx2], N, N);
-            %UP2 = spdiags([-e/2, e/2], [-1, 1], N, N);
+            D = sparse(N_all, N_all);
+            %D1 = spdiags([-e, e], [-Nx2, 0], N, N);
+
+            %D2 = spdiags([-e, e], [-1, 0], N, N);
+            D1 = spdiags([-e/2, e/2], [-Nx2, Nx2], N, N);
+            D2 = spdiags([-e/2, e/2], [-1, 1], N, N);
     
-            UP(1:N,1:N) = -sigma1*UP1.*dx1ds1(:).*dM11dx1(:);
-            UP(N+1:end,N+1:end) = -sigma2*UP2.*dx2ds2(:).*dM22dx2(:);
+            D(1:N,1:N) = -sigma1*D1.*dx1ds1(:).*dM11dx1(:) - sigma2*D2.*dx1ds2(:).*dM11dx1(:);
+            D(N+1:end,N+1:end) = -sigma2*D2.*dx2ds2(:).*dM22dx2(:) - sigma1*D1.*dx2ds1(:).*dM22dx2(:);
 
             if  param.nonlinear == 3 && param.forDx == 1
-                UP = UP * 2;
+                D = D * 2;
             end
 
-            A = A + UP;
+            A = A + D;
         end
 
         %A(id.inner,:) = -2*A(id.inner,:).*Mii(id.inner,:);

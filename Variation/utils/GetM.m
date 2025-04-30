@@ -2,10 +2,10 @@
 % If M_type is struct {x1_samp, x2_samp, M_samp, x1, x2}, then M would be
 % numerically defined
 
-function M = GetM(x1, x2, M_type)
+function M = GetM(x1, x2, M_type, C)
     if isnumeric(M_type)
         if M_type == 1
-            C = 1;
+            %C = 100;
             M.M11 = 40000 * (1 + C*15 * x1).^(-2);
             M.M22 = 40000 * (1 + C*15 * x2).^(-2);
             M.dM11dx1 = -C*1200000 * (1 + C*15 * x1).^(-3);
@@ -13,13 +13,14 @@ function M = GetM(x1, x2, M_type)
             M.dM22dx1 = zeros(size(x1));
             M.dM22dx2 = -C*1200000 * (1 + C*15 * x2).^(-3);
         elseif M_type == 2
-            C = 1.7;
-            M.M11 = 1000 + C*600*sin(2*pi*x1).*sin(2*pi*x2);
-            M.M22 = 1000 - C*600*sin(2*pi*x1).*sin(2*pi*x2);
-            M.dM11dx1 = C*1200*pi*cos(2*pi*x1).*sin(2*pi*x2);
-            M.dM11dx2 = C*1200*pi*sin(2*pi*x1).*cos(2*pi*x2);
-            M.dM22dx1 = -C*1200*pi*cos(2*pi*x1).*sin(2*pi*x2);
-            M.dM22dx2 = -C*1200*pi*sin(2*pi*x1).*cos(2*pi*x2);
+            C = 990/600;
+            freq = 1;
+            M.M11 = 1000 + C*600*sin(freq*2*pi*x1).*sin(freq*2*pi*x2);
+            M.M22 = 1000 - C*600*sin(freq*2*pi*x1).*sin(freq*2*pi*x2);
+            M.dM11dx1 = freq*C*1200*pi*cos(freq*2*pi*x1).*sin(freq*2*pi*x2);
+            M.dM11dx2 = freq*C*1200*pi*sin(freq*2*pi*x1).*cos(freq*2*pi*x2);
+            M.dM22dx1 = -freq*C*1200*pi*cos(freq*2*pi*x1).*sin(freq*2*pi*x2);
+            M.dM22dx2 = -freq*C*1200*pi*sin(freq*2*pi*x1).*cos(freq*2*pi*x2);
         elseif M_type == 3
             [Nx2, Nx1] = size(x1);
             M.M11 = 2000*ones(Nx2, Nx1);

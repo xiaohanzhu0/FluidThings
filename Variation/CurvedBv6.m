@@ -1,22 +1,21 @@
-clear
+function res_list = CurvedBv6(nonlinear, epsilon, C)
 addpath('./','./utils')
 animation = 1;
 pause_time = 0;
 make_gif = 0;
-problem = 2;
+problem = 1;
 param.method = 1;
-param.nonlinear = 1;
+param.nonlinear = nonlinear;
 gif_name = 'example13.gif';
 title_name = 'Curved boundary, Curved metric, Alternative Cost function';
 save_output = 0;
 march_type = 'regular';
 
-C = 0.1;
 Nx1 = 50;
 Nx2 = 50;
-max_iter = 200;
+max_iter = 500;
 tolerance = 1e-6;
-epsilon = 0.5; % Under-relaxation factor
+epsilon = epsilon; % Under-relaxation factor
 
 % Grid size
 N = Nx1*Nx2;
@@ -61,10 +60,11 @@ res_list = [];
 err_list = [];
 %%
 param.forDx = 0;
-M = GetM(x1, x2, M_type);
+M = GetM(x1, x2, M_type, C);
 [A, b, res] = AssembleLinearSystem(x1, x2, M, param);
-for iter = 1:100
-    M = GetM(x1, x2, M_type);
+res_list = [res_list, norm(res)];
+for iter = 1:max_iter
+    M = GetM(x1, x2, M_type, C);
     res_old = res;
 
     %[A, b, res] = AssembleLinearSystem(x1, x2, M, param);
@@ -146,10 +146,17 @@ for iter = 1:100
         pause(pause_time);
     end
     if make_gif; exportgraphics(gcf, gif_name, Append=true); end
+
+    if tolerance * res_list(1) > res_list(end); break; end
+    if res_list(end) > 1/tolerance * res_list(1)
+        res_list(end) = NaN;
+        break; 
+    end
+end
 end
 
 %%
-figure(2)
-semilogy(res_list); hold on
-legend('Residual', 'Error');
-grid on
+%figure(2)
+%semilogy(res_list); hold on
+%legend('Residual', 'Error');
+%grid on

@@ -1,3 +1,16 @@
+Linearization 1 (Previous work):
+$$\frac{\partial x_i}{\partial s_j}\frac{\partial x_i}{\partial s_j} \to \frac{\partial x_i}{\partial s_j}\frac{(\partial x_i + \Delta x_i)}{\partial s_j} = \left(\frac{\partial x_i}{\partial s_j} \right)^2 + \frac{\partial  \Delta x_i}{\partial s_j}$$
+Linearization 2:
+$$\frac{\partial x_i}{\partial s_j}\frac{\partial x_i}{\partial s_j} \to \frac{(\partial x_i + \Delta x_i)}{\partial s_j}\frac{(\partial x_i + \Delta x_i)}{\partial s_j} = \left(\frac{\partial x_i}{\partial s_j} \right)^2 + 2\frac{\partial  \Delta x_i}{\partial s_j}$$
+No Jacobian on $M$ so far
+
+With C=1
+![[C=1.png]]
+
+With C=10
+![[C=10.png]]
+
+
 ![[Inbox 7.pdf]]
 
 Upwind is used for those first order derivative discretizations.
