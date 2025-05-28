@@ -5,7 +5,6 @@
 function M = GetM(x1, x2, M_type, C)
     if isnumeric(M_type)
         if M_type == 1
-            %C = 100;
             M.M11 = 40000 * (1 + C*15 * x1).^(-2);
             M.M22 = 40000 * (1 + C*15 * x2).^(-2);
             M.dM11dx1 = -C*1200000 * (1 + C*15 * x1).^(-3);
@@ -13,7 +12,6 @@ function M = GetM(x1, x2, M_type, C)
             M.dM22dx1 = zeros(size(x1));
             M.dM22dx2 = -C*1200000 * (1 + C*15 * x2).^(-3);
         elseif M_type == 2
-            C = 990/600;
             freq = 1;
             M.M11 = 1000 + C*600*sin(freq*2*pi*x1).*sin(freq*2*pi*x2);
             M.M22 = 1000 - C*600*sin(freq*2*pi*x1).*sin(freq*2*pi*x2);

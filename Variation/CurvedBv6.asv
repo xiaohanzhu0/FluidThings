@@ -1,20 +1,19 @@
-function res_list = CurvedBv6(nonlinear, omega, C)
+function res_list = CurvedBv6(nonlinear, epsilon, C)
 addpath('./','./utils')
 animation = 1;
 pause_time = 0;
-problem = 4;
-param.nonlinear = nonlinear;
-
 make_gif = 0;
+problem = 2;
+param.nonlinear = nonlinear;
 gif_name = 'example13.gif';
 title_name = 'Curved boundary, Curved metric, Alternative Cost function';
 save_output = 0;
 
-Nx1 = 50;
-Nx2 = 50;
+Nx1 = 100;
+Nx2 = 100;
 max_iter = 500;
 tolerance = 1e-6;
-omega = omega;
+epsilon = epsilon; % Under-relaxation factor
 
 % Grid size
 N = Nx1*Nx2;
@@ -50,20 +49,18 @@ err_list = [];
 %%
 param.forDx = 0;
 M = GetM(x1, x2, M_type, C);
-[A, b] = AssembleLinearSystem(x1, x2, M, param);
-res = norm(A*[x1(:);x2(:)] - b);
-
+%[A, b, res] = AssembleLinearSystem(x1, x2, M, param);
 err = [x1(:);x2(:)];
 res_list = [res_list, norm(res)];
 for iter = 1:max_iter
     M = GetM(x1, x2, M_type, C);
     
     param.forDx = 0;
-    [A, b] = AssembleLinearSystem(x1, x2, M, param);
+    [A, b, o] = AssembleLinearSystem(x1, x2, M, param);
     res = b - A*[x1(:);x2(:)];
 
     param.forDx = 1;
-    [A, b] = AssembleLinearSystem(x1, x2, M, param);
+    [A, b, o] = AssembleLinearSystem(x1, x2, M, param);
 
     if param.nonlinear == 4
         res = A*err - b;
@@ -82,13 +79,13 @@ for iter = 1:max_iter
     dx1(1,1)=0; dx1(1,end)=0; dx1(end,1)=0; dx1(end,end)=0;
     dx2(1,1)=0; dx2(1,end)=0; dx2(end,1)=0; dx2(end,end)=0;
 
-    x1 = x1 + omega*dx1;
-    x2 = x2 + omega*dx2;
+    x1 = x1 + epsilon*dx1;
+    x2 = x2 + epsilon*dx2;
 
     res_list = [res_list, norm(res)];
     err_list = [err_list, norm(norm(dx1,'fro'),norm(dx2,'fro'))];
 
-    if problem == 0 || problem == 3 || problem == 4 || problem == 5
+    if problem == 0 || problem == 4 || problem == 5
         [x1, x2] = UpdateCorrection(x1, x2, x1_exact, x2_exact);
     end
     
@@ -96,6 +93,7 @@ for iter = 1:max_iter
         figure(1)
         plot(x1, x2, 'k'); hold on; plot(x1', x2', 'k');
         title(title_name); xlim([0,1]); ylim([0,1]);
+        %plot(s1, x1(20,:));  xlim([0,1]); ylim([-0.1,1]); grid on
         axis equal; hold off;
         pause(pause_time);
     end

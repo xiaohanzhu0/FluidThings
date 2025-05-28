@@ -1,6 +1,6 @@
-nonlinear_list = [2, 3];
-epsilon_list = 0.3:0.1:2;
-C = 1;
+nonlinear_list = [2, 4];
+epsilon_list = 0.1:0.1:0.8;
+C = 990/600;
 converge_list = zeros(2,length(epsilon_list));
 
 for i = 1:2
@@ -18,7 +18,7 @@ for i = 1:2
 end
 %converge_list(converge_list>=201) = NaN;
 %converge_list(converge_list==0) = NaN;
-
+%%
 plot(epsilon_list, converge_list, '-o', LineWidth=2);
 legend('nonlinear 1', 'nonlinear 2');
 title('Number of iteration to reach 1e-6 vs relaxation')

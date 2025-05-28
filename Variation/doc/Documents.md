@@ -1,3 +1,13 @@
+
+![[Inbox 8.pdf]]
+
+
+$$M_{11} = 1000+600C\sin(2\pi x_1)\sin(2\pi x_2)$$
+$$M_{22} = 1000-600C\sin(2\pi x_1)\sin(2\pi x_2)$$
+For the case $C=1.65$, so the $\max{M}/\min{M}\approx 20000$
+
+![[New_C1.65.png]]
+
 Linearization 1 (Previous work):
 $$\frac{\partial x_i}{\partial s_j}\frac{\partial x_i}{\partial s_j} \to \frac{\partial x_i}{\partial s_j}\frac{(\partial x_i + \Delta x_i)}{\partial s_j} = \left(\frac{\partial x_i}{\partial s_j} \right)^2 + \frac{\partial  \Delta x_i}{\partial s_j}$$
 Linearization 2:
