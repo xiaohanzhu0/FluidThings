@@ -2,14 +2,14 @@
 % 4 ---- 3
 % |      |
 % 1 ---- 2
-function [x1_new, x2_new] = UpdateCorrection(x1, x2, x1_exact, x2_exact)
+function [x1_new, x2_new] = UpdateCorrection(x1, x2, boundary_points)
     x1_new = x1;
     x2_new = x2;
     % For bottom boundary
     bx1 = x1(1,:);
     bx2 = x2(1,:);
-    bx1_exact = x1_exact(1,:);
-    bx2_exact = x2_exact(1,:);
+    bx1_exact = boundary_points.b(1,:);
+    bx2_exact = boundary_points.b(2,:);
     [bx1_new, bx2_new] = UpdateEachSide(bx1, bx2, bx1_exact, bx2_exact);
     x1_new(1,:) = bx1_new;
     x2_new(1,:) = bx2_new;
@@ -17,8 +17,8 @@ function [x1_new, x2_new] = UpdateCorrection(x1, x2, x1_exact, x2_exact)
     % For top boundary
     bx1 = x1(end,:);
     bx2 = x2(end,:);
-    bx1_exact = x1_exact(end,:);
-    bx2_exact = x2_exact(end,:);
+    bx1_exact = boundary_points.t(1,:);
+    bx2_exact = boundary_points.t(2,:);
     [bx1_new, bx2_new] = UpdateEachSide(bx1, bx2, bx1_exact, bx2_exact);
     x1_new(end,:) = bx1_new;
     x2_new(end,:) = bx2_new;
@@ -26,8 +26,8 @@ function [x1_new, x2_new] = UpdateCorrection(x1, x2, x1_exact, x2_exact)
     % For left boundary
     bx1 = x1(:,1);
     bx2 = x2(:,1);
-    bx1_exact = x1_exact(:,1);
-    bx2_exact = x2_exact(:,1);
+    bx1_exact = boundary_points.l(:,1);
+    bx2_exact = boundary_points.l(:,2);
     [bx1_new, bx2_new] = UpdateEachSide(bx1, bx2, bx1_exact, bx2_exact);
     x1_new(:,1) = bx1_new;
     x2_new(:,1) = bx2_new;
@@ -35,8 +35,8 @@ function [x1_new, x2_new] = UpdateCorrection(x1, x2, x1_exact, x2_exact)
     % For right boundary
     bx1 = x1(:,end);
     bx2 = x2(:,end);
-    bx1_exact = x1_exact(:,end);
-    bx2_exact = x2_exact(:,end);
+    bx1_exact = boundary_points.r(:,1);
+    bx2_exact = boundary_points.r(:,2);
     [bx1_new, bx2_new] = UpdateEachSide(bx1, bx2, bx1_exact, bx2_exact);
     x1_new(:,end) = bx1_new;
     x2_new(:,end) = bx2_new;

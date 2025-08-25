@@ -1,4 +1,183 @@
 
+
+Regarding the $p^{-1}$ penalization in the $x(s)$ formulation: we noted that the penalization modifies the divergence form to  
+$\frac{\partial}{\partial s} \big( (1 - p^{-2}) \frac{\partial x}{\partial s} \big) = \text{Source}$.  
+This can become singular if $(1 - p^{-2}) \leq 0$. To avoid this, I moved the $p^{-2}$ term to the right-hand side. This prevents the singularity issue and instead applies a softer penalty on shrunken or overlapping grids. In practice, the grid converged under this formulation, but overlapping problems still remained.
+
+---
+On the $s(x)$ formulation: since the optimized mesh size satisfies $l_i M_{ij} l_j = 1$, in matrix form we have $\nabla x^T M \nabla x = I$,  which implies $(\nabla x^T M \nabla x)^{-1} = \nabla s^T M^{-1} \nabla s = I$. Thus, if perfect optimization is achievable, we can redefine $p$ as $s_{\alpha,i} M_{ij} s_{\alpha,j}$. Meanwhile, with $ds = |J|^{-1} dx$, there remains a scalar weight of $|J|^{-1}$. This leads to the Euler–Lagrange equation
+
+$$ \frac{\partial}{\partial x_i} ( J^{-1} M_{ij} \frac{\partial s_\alpha}{\partial x_j}) = 0$$
+
+with no source term, since $\frac{\partial L}{\partial s} = 0$.
+
+So far, I have tested a linearized version by assuming $|J|^{-1} \approx \text{Area of element} \approx \sqrt{\det(M)}$, making the Euler–Lagrange equation linear and solvable in one shot. The results differ somewhat in regions with high metric variation or high curvature. This approach is more robust, requires no iteration, and avoids concave overlap issues.
+
+
+
+
+
+
+Next step might be testing on the nonlinear case using real J^{-1}. Also, one shows we can transform back to x(s) systems by utilizing the fact that $\xi_x = |J|^{-1} y_\eta,  \xi_y = -|J|^{-1} x_\eta, \eta_x = -|J|^{-1} y_\xi, \eta_y = |J|^{-1} x_\xi$. This is different from the original Euler-Lagrangian as it is based from s(x) formulation, so it avoids the concave overlap problem while still solved on a uniform cartesian mesh:
+
+[http://persson.berkeley.edu/math228b/slides/meshgeneration_slides.pdf](http://persson.berkeley.edu/math228b/slides/meshgeneration_slides.pdf)
+
+
+$$J[s] = \int_\Omega \sum_{\alpha=1}^d \sigma_\alpha^2 \frac{\partial s_\alpha}{\partial x_i} M_{ij}^{-1} \frac{\partial s_\alpha}{\partial x_j} \,dx $$
+
+
+
+
+
+
+
+### Jacobian-Free Newton Treatment
+Even we fully linearize the system using Jacobian-free with Newton-Krylov approximation, it still causes overlaps. I am thinking about this is the inevitable flaw of the alternative functional kernel.
+
+### Penalize small or overlapped mesh grid
+Since the alternative cost function is minimized when $p_\alpha$ shrinks to 0, it doesn't punish collapsed mesh grids and can cause overlaps. We add punishment functional kernels.
+$$L_{1} = \sum_{\alpha} \sigma^2_\alpha p_\alpha^{-1}$$
+$$L_{2} = -\sum_{\alpha} \sigma^2_\alpha \log(p_\alpha)$$
+$$L_{3} = \sum_{\alpha} \sigma^2_\alpha |J(x,s)|^{-1}$$
+$$L_{3} = -\sum_{\alpha} \sigma^2_\alpha \log(|J(x,s)|)$$
+They don't perform well. If there are mesh grids that are too small, they overshoot so much.
+
+![[failed_example.gif]]
+
+Then we want to make the punishment functional kernels finite. Then one of the easiest returns back to the exact/approximate cost functional. For now, it better than alternative at least on the uniform metric tensor field:
+
+![[approximate.png]]
+
+![[alternative.png]]
+
+But as the metric field has greater variance, the approximate one failed to converge. I need to apply blurring convolution kernel about 50 times to get a metric field smooth enough.
+
+IDEA:
+I am thinking about a better way to smoothen the metric field:
+https://www.sciencedirect.com/science/article/abs/pii/S0168874X09000912
+This is more physically correct as it conserves the positive definiteness of metric field and more conformed to a real mesh.
+
+
+
+
+
+### Mesh generation on C-shaped airfoil
+
+#### Metric tensor smoothing and interpolation
+A 1D Gaussian kernel is used to smoothen the raw metric tensor data in both direction in sequence. 
+
+Since the metric data is not sampled uniformly, we used MATLAB's Delaunay triangulation interpolation function `scatteredInterpolant` (which can be improved in the future since the sampled data is structured, but we don't want because the efficiency improvement is not significant so far).
+
+#### Initial mesh generation
+Initially, we kept the use of transfinite interpolation as the initial mesh. It couldn't converge well for the case of airfoil. Then we tried to use hyperbolic mesh generation as the initial mesh, which is based on the formulation:
+$$x_\xi x_\eta + y_\xi y_\eta = 0,\quad x_\xi y_\eta - y_\xi x_\eta = J^{-1}$$
+After linearization, this becomes:
+$$x^{n+1}_\xi x_\eta + x_\xi x_\eta^{n+1} + y_\xi^{n+1}y_\eta + y_\xi y_\eta^{n+1}=0,\quad x^{n+1}_\xi y_\eta + x_\xi y_\eta^{n+1} + y_\xi^{n+1}x_\eta + y_\xi x_\eta^{n+1}= J^{-1} + (J^{n+1})^{-1} $$
+Or:
+$$\mathbf{Aw}_\xi + \mathbf{Bw}_\eta = \mathbf{f}$$
+Where:
+$$\mathbf{w} = \begin{bmatrix}x^{n+1} \\ y^{n+1}\end{bmatrix}, \quad \mathbf{A} = \begin{bmatrix} x_\eta & y_\eta \\ y_\eta &-x_\eta\end{bmatrix} , \quad \mathbf{B} = \begin{bmatrix} x_\xi & y_\xi \\ -y_\xi &x_\xi\end{bmatrix}, \quad \mathbf{f}=\begin{bmatrix}0 \\ 2J^{-1}\end{bmatrix}$$
+Using central differencing in $\xi$ direction and marching in $\eta$ direction using first order biased differencing.
+
+
+I tried to introduce artificial diffusion by adding second order derivative to make the grids far away more regular, but my current implementation doesn't do well. I instead added "artificially-artificial diffusion" by smoothing each layer as: $$\mathbf{x}_{i,j} = (\mathbf{x}_{i+1,j}+2\mathbf{x}_{i,j}+\mathbf{x}_{i-1,j})/4$$
+
+#### Airfoil result
+`Nx1=435; Nx2=142; grade_ratio=1.01; relaxation=0.1`
+
+
+![[Variation/outputs/20250623_164858/Figure_06.png]]
+![[Variation/outputs/20250623_164858/Figure_05.png]]
+![[Variation/outputs/20250623_164858/Figure_04.png]]
+![[Variation/outputs/20250623_164858/Figure_03.png]]
+![[Variation/outputs/20250623_164858/Figure_02.png]]
+![[Variation/outputs/20250623_164858/Figure_01.png]]
+
+
+
+For now, the convergence condition is very delicate. It only converges to acceptable result under some specific setups. Other results include: 
+1. Intruding airfoil heading edge due to large curvature (no enough tangent grid points),
+2. Overlap at the normal boundary from the trailing edge (no enough normal grid points),
+3. Overlap at the airfoil heading edge (too many tangent grid points)
+4. Blows up due to bad aspect ratio at far field (too many normal grid points),
+
+
+
+
+
+The recurrence relation is:
+$$x_{n+1} = x_n + \alpha(x_n-x_{n-1}), \quad \text{where $x_1$ and $x_N$ is given}$$
+The general solution is:
+$$x_n=\frac{x_N (\alpha^n-\alpha )+x_1 \left(\alpha ^N-\alpha ^n\right)}{\alpha ^N-\alpha }$$
+
+
+
+
+
+### Validation case: rotating metric tensor
+By rotating the system, a diagonal tensor can contain off-diagonal terms:
+$$
+\begin{array}{cc}
+ M_{11} = \cos (\theta ) \left(M_{11} \cos (\theta )-M_{12} \sin (\theta )\right)-\sin (\theta ) \left(M_{12} \cos (\theta )-M_{22} \sin (\theta )\right) \\
+ M_{12} = \cos (\theta ) \left(M_{11} \sin (\theta )+M_{12} \cos (\theta )\right)-\sin (\theta ) \left(M_{12} \sin (\theta )+M_{22} \cos (\theta )\right) \\
+ M_{22} = \sin (\theta ) \left(M_{11} \sin (\theta )+M_{12} \cos (\theta )\right)+\cos (\theta ) \left(M_{12} \sin (\theta )+M_{22} \cos (\theta )\right) \\
+\end{array}
+$$
+We rotate the domain and the metric tensor by a same angle while keep my physical coordinate fixed, the correct result should be the same as the original case after rotating back. Now the metric tensor would naturally has off-diagonal terms from tensor transformation rules.
+
+### Find $M(x)$ and $\frac{\partial M(x)}{\partial x}$ numerically
+For each iteration, we need the values of $M(x)$ and $\frac{\partial M(x)}{\partial x}$ based on $x$ from previous iteration:
+We directly using bicubic interpolation to obtain metric tensor value $M$ based on structured grid points $x_1,x_2$.
+Compute the gradient $\nabla_{x_1} M$ and $\nabla_{x_2} M$ as:
+$$\begin{bmatrix}\frac{\partial x_1}{\partial s_1} & \frac{\partial x_2}{\partial s_1} \\ \frac{\partial x_1}{\partial s_2} & \frac{\partial x_2}{\partial s_2}\end{bmatrix}\begin{bmatrix}\nabla_{x_1}M \\  \nabla_{x_2}M \end{bmatrix}= J_{ij}\begin{bmatrix}\nabla_{x_1}M \\  \nabla_{x_2}M \end{bmatrix}_{ij}= \begin{bmatrix} \frac{\partial M}{\partial s_1} \\ \frac{\partial M}{\partial s_2}\end{bmatrix}_{ij}$$
+For every grid points $(i,j)$. $J$ and $\frac{\partial M}{\partial s}$ is computed from finite difference with respect to $s$. $J$ is $2\times 2$, which is very cheap to invert. 
+![[2.png]]
+![[1.png]]
+
+
+
+### Next step: testing on airfoil with multi-block partition
+Smoothing by doing convolution in physical domain vs in computational domain
+![[example.png]]
+
+Smoothing original sampled data (more consistent, better convergence) vs smoothing each interpolation (more accurate)
+
+Connect work with Marvyn: where to partition
+	partition at huge metric spikes?
+
+
+
+
+
+
+
+Based on problem 1: $$M_{11}=40000(1+15x_1)^{-2},\quad M_{22}=40000(1+15x_2)^{-2}$$
+$$M_{12}=2000(1+15x_1x_2)^{-2}, \quad\text{or}\quad M_{12}=0$$
+
+![[off_diag.png]]
+![[off_diag (1).png]]
+
+![[no_off_diag.png]]
+![[no_off_diag (1).png]]
+
+![[p1_residual.png]]
+
+
+
+
+Based on problem 3: $$M_{11}=M_{22}=2000$$
+$$M_{12}=1990,\quad \text{or} \quad M_{12}=0$$
+With off-diagonal:
+![[p3_offdiag.png]]
+Without off-diagonal:
+![[p3_no_offdiag.png]]
+![[p3_residual.png]]
+
+
+
+
+
+
 ![[Inbox 8.pdf]]
 
 
