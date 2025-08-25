@@ -1,12 +1,12 @@
 close all
 addpath('./','./utils')
 
-cf.C = 2;
-cf.problem = 3;
+cf.C = 1;
+cf.problem = 5;
 cf.Nx1 = 217*2+1;
 cf.Nx2 = 71*1;
-cf.Nx1 = 40;
-cf.Nx2 = 40;
+cf.Nx1 = 41;
+cf.Nx2 = 41;
 cf.N = cf.Nx1*cf.Nx2;
 cf.alpha = 1.005;
 
@@ -31,5 +31,10 @@ cf.make_gif = 0;
 cf.gif_name = 'failed_example.gif';
 cf.title_name = 'Alternative';
 cf.save_output = 0;
+
+if cf.new_airfoil == 1
+    cf.metric_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/metricField.fields';
+    cf.airfoil_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/airfoil_18M_coarseIJK.grid';
+end
 
 [res_list,cost_list] = CurvedBv6(cf);

@@ -1,9 +1,7 @@
-function [T1, T2, M_samp] = InitProb5(Nx1, Nx2, alpha, new_airfoil, append_trail)
-    if new_airfoil
-        [data, vartype, varname, ncvs, gridfile] = readTurtleFields('metricField.fields');
-        [x_cv, x_no, x_fa, ncvs, ...
-                  bndNames, bnd_block_begin_end, ...
-                  int_block_begin_end_A, int_block_begin_end_B, int_offset, int_angle] = readTurtleGrid('airfoil_18M_coarseIJK.grid');
+function [T1, T2, M_samp] = InitProb5(cf)
+    if cf.new_airfoil
+        [data, ~, ~, ~, ~] = readTurtleFields(cf.metric_datapath);
+        [x_cv, ~, ~, ~, ~, ~, ~, ~, ~, ~] = readTurtleGrid(cf.airfoil_datapath);
         M_samp.x_metric = [x_cv{1,9}(:,:,1,1), x_cv{1,8}(:,:,1,1);
         x_cv{1,10}(:,:,1,1),x_cv{1,1}(:,:,1,1);
         x_cv{1,11}(:,:,1,1),x_cv{1,2}(:,:,1,1);
@@ -94,31 +92,10 @@ function [T1, T2, M_samp] = InitProb5(Nx1, Nx2, alpha, new_airfoil, append_trail
 
 
     %[T1, T2] = transfiniteInterp(b1', b2', b3', b4', aux');
-    gd = Hyperbolic(Nx1, Nx2, alpha, append_trail);
+    gd = Hyperbolic(cf.Nx1, cf.Nx2, cf.alpha, cf.append_trail);
     T1 = gd.x';
     T2 = gd.y';
 
-    %T1 = M_samp.x_metric';
-    %T2 = M_samp.y_metric';
-    %T1 = T1(:,1:ceil(4*Nx1/10));
-    %T2 = T2(:,1:ceil(4*Nx1/10));
-
-    %T1 = T1(:,end-148:end);
-    %T2 = T2(:,end-148:end);
-    %T1 = T1(:,end-49:end);
-    %T2 = T2(:,end-49:end);
-    %T1 = T1(:,218-50:218+50);
-    %T2 = T2(:,218-50:218+50);
-
-    %[T1, T2] = transfiniteInterp(b1', b2', b3', b4');
-    
-    %figure(10)
-    %for i=1:size(T1,1)
-    %    plot(T1(i,:),T2(i,:)); hold on
-    %end
-    %for i=1:size(T1,2)
-    %    plot(T1(:,i),T2(:,i))
-    %end
 end
 
 %% Apply TFI

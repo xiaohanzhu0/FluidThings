@@ -10,7 +10,7 @@ params.append_trail = append_trail;
 params.trail_factor = 1.005;
 params.alpha = alpha;
 
-addpath('~/Files/data/Mesh_generation/Airfoil');
+addpath('~/Files/data/Mesh_generation/Airfoil/foil1');
 foil = readmatrix('A-airfoil.txt', 'NumHeaderLines', 1);
 foil = foil(:,1:2);
 N = ceil(params.JMAX/2);

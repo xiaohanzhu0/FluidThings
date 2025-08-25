@@ -22,7 +22,7 @@ elseif cf.problem == 4
     boundary_points.l = [x1(1,1), x1(end,1); x2(1,1), x2(end,1)]';
     boundary_points.r = [x1(1,end), x1(end,end); x2(1,end), x2(end,end)]';
 elseif cf.problem == 5
-    [x1, x2, M_type] = InitProb5(cf.Nx1, cf.Nx2, cf.alpha, cf.new_airfoil, cf.append_trail);
+    [x1, x2, M_type] = InitProb5(cf);
     boundary_points.b = [x1(1,:); x2(1,:)];
     boundary_points.t = [x1(end,:); x2(end,:)];
     boundary_points.l = [x1(:,1), x2(:,1)];
