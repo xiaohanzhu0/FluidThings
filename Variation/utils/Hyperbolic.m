@@ -1,7 +1,5 @@
 function gd = Hyperbolic(JMAX, KMAX, alpha, append_trail)
 
-%params.JMAX = 217;
-%params.KMAX = 71*2;
 params.JMAX = JMAX;
 params.KMAX = KMAX;
 params.dxi  = 1 / (params.JMAX-1);
@@ -18,7 +16,7 @@ j = 1:N;
 
 %x = 0.5 - 0.5*cos(pi*(N-j)/(N-1));
 x = 1 - cos(pi*(N-j)/(N-1)/2);
-[o,i_head] = min(foil(:,1));
+[~,i_head] = min(foil(:,1));
 foil_up = foil(i_head:end,:);
 foil_down = foil(1:i_head,:);
 y_up = interp1(foil_up(:,1),foil_up(:,2),x,'spline');
@@ -27,7 +25,7 @@ y_down = interp1(foil_down(:,1),foil_down(:,2),x,'spline');
 Nup = N+0;
 j = 1:Nup;
 xup = 1 - cos(pi*(Nup-j)/(Nup-1)/2);
-[o,i_head] = min(foil(:,1));
+[~,i_head] = min(foil(:,1));
 foil_up = foil(i_head:end,:);
 y_up = interp1(foil_up(:,1),foil_up(:,2),xup,'spline');
 Ndown = N-0;
@@ -87,13 +85,6 @@ function gd = solve_hyperbolic(gd, params)
         b = (dxdxi.*dydeta + dydxi.*dxdeta) ./ (dxdxi.^2 + dydxi.^2);
         lambda = sqrt(a.^2 + b.^2);
 
-        %if k <= ceil(params.KMAX/2)
-        %    params.deta = params.alpha^k*params.dxi/max(lambda);
-        %else
-        %    deta1 = params.alpha^ceil(params.KMAX/2)*params.dxi/max(lambda);
-        %    deta2 = params.alpha^ceil(params.KMAX/2+1)*params.dxi/max(lambda);
-        %    params.deta = params.deta + (deta2-deta1);
-        %end
         params.deta = params.alpha^k*params.dxi/max(lambda);
 
         dxdxi = [gd.x(2,k-1)-gd.x(end,k-1); gd.x(3:end,k-1)-gd.x(1:end-2,k-1); gd.x(1,k-1)-gd.x(end-1,k-1)]/(2*params.dxi);
@@ -139,12 +130,6 @@ function gd = solve_hyperbolic(gd, params)
         for ii=10:k
             w = [w(1,:); w(1:end-2,:)/3 + w(2:end-1,:)/3 + w(3:end,:)/3 ;w(end,:)];
         end
-
-        %dw = [gd.x(:,k-1) - w(:,1), gd.y(:,k-1) - w(:,2)];
-        %w_n = vecnorm(dw,2,2);
-        %w_t = vecnorm([w(2,:)-w(1,:); (w(3:end,:)-w(1:end-2,:))/2; w(end,:)-w(end-1,:)],2,2);
-        %dw = dw ./ w_n .* max(min(w_n, w_t));
-        %w = [gd.x(:,k-1) - dw(:,1), gd.y(:,k-1) - dw(:,2)];
         
         gd.x(:,k) = w(:,1);
         gd.y(:,k) = w(:,2);
