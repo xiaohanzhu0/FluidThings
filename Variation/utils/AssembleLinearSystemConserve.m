@@ -3,14 +3,16 @@ function [A, b, res] = AssembleLinearSystemConserve(x1, x2, M, param)
 N = Nx1*Nx2;
 N_all = 2*N;
 
-sigma1 = 1 / Nx1;
-sigma2 = 1 / Nx2;
+ds1 = 1 / Nx1;
+ds2 = 1 / Nx2;
+sigma1 = 1 / Nx1; %param.sigma1;
+sigma2 = 1 / Nx2; %param.sigma2;
 
 M11 = zeros(Nx2+2,Nx1+2); M12 = zeros(Nx2+2,Nx1+2); M22 = zeros(Nx2+2,Nx1+2);
 dM11dx1=M.dM11dx1; dM11dx2=M.dM11dx2; dM22dx1=M.dM22dx1; dM22dx2=M.dM22dx2;
 dM12dx1=M.dM12dx1; dM12dx2=M.dM12dx2;
-[dx1ds1, dx2ds2] = DCentral(x1, x2, sigma1, sigma2);
-[dx2ds1, dx1ds2] = DCentral(x2, x1, sigma1, sigma2);
+[dx1ds1, dx2ds2] = DCentral(x1, x2, ds1, ds2);
+[dx2ds1, dx1ds2] = DCentral(x2, x1, ds1, ds2);
 
 m1 = zeros(Nx2+2,Nx1+2); m2 = zeros(Nx2+2,Nx1+2); 
 m1(2:end-1,2:end-1) = sigma1^2*(M.M11.*dx1ds1.^2 + 2*M.M12.*dx1ds1.*dx2ds1 + M.M22.*dx2ds1.^2) - 1;
@@ -74,34 +76,37 @@ end
 %}
 
 e = ones(N,1);
-D11_coef = -M11_f1(2:end-1,1:end-1)-M11_f1(2:end-1,2:end)-M11_f2(1:end-1,2:end-1)-M11_f2(2:end,2:end-1);
+
+D11_coef = -(M11_f1(2:end-1,1:end-1)+M11_f1(2:end-1,2:end))*(sigma1/ds1)^2 ...
+           -(M11_f2(1:end-1,2:end-1)+M11_f2(2:end,2:end-1))*(sigma2/ds2)^2;
 D11 = spdiags(e, 0, N, N) .* D11_coef(:);
 
-D12_coef = -M12_f1(2:end-1,1:end-1)-M12_f1(2:end-1,2:end)-M12_f2(1:end-1,2:end-1)-M12_f2(2:end,2:end-1);
+D12_coef = -(M12_f1(2:end-1,1:end-1)+M12_f1(2:end-1,2:end))*(sigma1/ds1)^2 ...
+           -(M12_f2(1:end-1,2:end-1)+M12_f2(2:end,2:end-1))*(sigma2/ds2)^2;
 D12 = spdiags(e, 0, N, N) .* D12_coef(:);
 
-U1_11_coef = M11_f2(2:end,2:end-1);
+U1_11_coef = M11_f2(2:end,2:end-1) * (sigma2/ds2)^2;
 U1_11 = spdiags(e, 1, N, N) .* U1_11_coef(:);
 
-L1_11_coef = M11_f2(1:end-1,2:end-1);
+L1_11_coef = M11_f2(1:end-1,2:end-1) * (sigma2/ds2)^2;
 L1_11 = spdiags(e, -1, N, N) .* L1_11_coef(:);
 
-Ux2_11_coef = M11_f1(2:end-1,2:end);
+Ux2_11_coef = M11_f1(2:end-1,2:end) * (sigma1/ds1)^2;
 Ux2_11 = spdiags(e, Nx2, N, N) .* Ux2_11_coef(:);
 
-Lx2_11_coef = M11_f1(2:end-1,1:end-1);
+Lx2_11_coef = M11_f1(2:end-1,1:end-1) * (sigma1/ds1)^2;
 Lx2_11 = spdiags(e, -Nx2, N, N) .* Lx2_11_coef(:);
 
-U1_12_coef = M12_f2(2:end,2:end-1);
+U1_12_coef = M12_f2(2:end,2:end-1) * (sigma2/ds2)^2;
 U1_12 = spdiags(e, 1, N, N) .* U1_12_coef(:);
 
-L1_12_coef = M12_f2(1:end-1,2:end-1);
+L1_12_coef = M12_f2(1:end-1,2:end-1)  * (sigma2/ds2)^2;
 L1_12 = spdiags(e, -1, N, N) .* L1_12_coef(:);
 
-Ux2_12_coef = M12_f1(2:end-1,2:end);
+Ux2_12_coef = M12_f1(2:end-1,2:end) * (sigma1/ds1)^2;
 Ux2_12 = spdiags(e, Nx2, N, N) .* Ux2_12_coef(:);
 
-Lx2_12_coef = M12_f1(2:end-1,1:end-1);
+Lx2_12_coef = M12_f1(2:end-1,1:end-1) * (sigma1/ds1)^2;
 Lx2_12 = spdiags(e, -Nx2, N, N) .* Lx2_12_coef(:);
 
 A = sparse(N_all,N_all);
@@ -111,35 +116,36 @@ A(1:N,N+1:end) = D12 + U1_12 + L1_12 + Ux2_12 + Lx2_12;
 
 %%
 
-
-D22_coef = -M22_f1(2:end-1,1:end-1)-M22_f1(2:end-1,2:end)-M22_f2(1:end-1,2:end-1)-M22_f2(2:end,2:end-1);
+D22_coef = -(M22_f1(2:end-1,1:end-1)+M22_f1(2:end-1,2:end)) * (sigma1/ds1)^2 ...
+           -(M22_f2(1:end-1,2:end-1)+M22_f2(2:end,2:end-1)) * (sigma2/ds2)^2;
 D22 = spdiags(e, 0, N, N) .* D22_coef(:);
 
-D21_coef = -M12_f1(2:end-1,1:end-1)-M12_f1(2:end-1,2:end)-M12_f2(1:end-1,2:end-1)-M12_f2(2:end,2:end-1);
+D21_coef = -(M12_f1(2:end-1,1:end-1)+M12_f1(2:end-1,2:end)) * (sigma1/ds1)^2 ...
+           -(M12_f2(1:end-1,2:end-1)+M12_f2(2:end,2:end-1)) * (sigma2/ds2)^2;
 D21 = spdiags(e, 0, N, N) .* D21_coef(:);
 
-U1_22_coef = M22_f2(2:end,2:end-1);
+U1_22_coef = M22_f2(2:end,2:end-1) * (sigma2/ds2)^2;
 U1_22 = spdiags(e, 1, N, N) .* U1_22_coef(:);
 
-L1_22_coef = M22_f2(1:end-1,2:end-1);
+L1_22_coef = M22_f2(1:end-1,2:end-1) * (sigma2/ds2)^2;
 L1_22 = spdiags(e, -1, N, N) .* L1_22_coef(:);
 
-Ux2_22_coef = M22_f1(2:end-1,2:end);
+Ux2_22_coef = M22_f1(2:end-1,2:end) * (sigma1/ds1)^2;
 Ux2_22 = spdiags(e, Nx2, N, N) .* Ux2_22_coef(:);
 
-Lx2_22_coef = M22_f1(2:end-1,1:end-1);
+Lx2_22_coef = M22_f1(2:end-1,1:end-1) * (sigma1/ds1)^2;
 Lx2_22 = spdiags(e, -Nx2, N, N) .* Lx2_22_coef(:);
 
-U1_21_coef = M12_f2(2:end,2:end-1);
+U1_21_coef = M12_f2(2:end,2:end-1) * (sigma2/ds2)^2;
 U1_21 = spdiags(e, 1, N, N) .* U1_21_coef(:);
 
-L1_21_coef = M12_f2(1:end-1,2:end-1);
+L1_21_coef = M12_f2(1:end-1,2:end-1)  * (sigma2/ds2)^2;
 L1_21 = spdiags(e, -1, N, N) .* L1_21_coef(:);
 
-Ux2_21_coef = M12_f1(2:end-1,2:end);
+Ux2_21_coef = M12_f1(2:end-1,2:end) * (sigma1/ds1)^2;
 Ux2_21 = spdiags(e, Nx2, N, N) .* Ux2_21_coef(:);
 
-Lx2_21_coef = M12_f1(2:end-1,1:end-1);
+Lx2_21_coef = M12_f1(2:end-1,1:end-1) * (sigma1/ds1)^2;
 Lx2_21 = spdiags(e, -Nx2, N, N) .* Lx2_21_coef(:);
 
 A(N+1:end,N+1:end) = D22 + U1_22 + L1_22 + Ux2_22 + Lx2_22;
@@ -242,8 +248,8 @@ if param.repulse == 1
     %aux1 = sigma1*p1.^(-2).*(dx1ds1) + sigma2*p2.^(-2).*(dx1ds2);
     %aux2 = sigma1*p1.^(-2).*(dx2ds1) + sigma2*p2.^(-2).*(dx2ds2);
 
-    [daux1ds1, daux1ds2] = DCentral(aux1, aux1, sigma1, sigma2);
-    [daux2ds1, daux2ds2] = DCentral(aux2, aux2, sigma1, sigma2);
+    [daux1ds1, daux1ds2] = DCentral(aux1, aux1, ds1, ds2);
+    [daux2ds1, daux2ds2] = DCentral(aux2, aux2, ds1, ds2);
 
     b1 = b1 + lambda*(daux1ds1 + daux1ds2);
     b2 = b2 + lambda*(daux2ds1 + daux2ds2);

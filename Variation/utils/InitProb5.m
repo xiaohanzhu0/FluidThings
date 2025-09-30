@@ -42,7 +42,7 @@ function [T1, T2, M_samp] = InitProb5(cf)
 
     h = gaussian1d(50, 100);
     
-    for i=1:50
+    for i=1:5
         M_samp.metric(:,:,1) = conv2(h,h,M_samp.metric(:,:,1),'same');
         M_samp.metric(:,:,2) = conv2(h,h,M_samp.metric(:,:,2),'same');
         M_samp.metric(:,:,3) = conv2(h,h,M_samp.metric(:,:,3),'same');
@@ -62,9 +62,9 @@ function [T1, T2, M_samp] = InitProb5(cf)
     %M_samp.metric(:,:,2) = M_samp.metric(:,:,2) .* linspace(10,1,size(M_samp.metric(:,:,1),2)).^2;
     %M_samp.metric(:,:,3) = conv2(h,h,M_samp.metric(:,:,3),'same') .* linspace(10,1,size(M_samp.metric(:,:,1),2)).^2;
 
-    M_samp.metric(:,:,1) = 5000*M_samp.metric(:,:,1) ./ M_samp.metric(:,:,1);
-    M_samp.metric(:,:,2) = M_samp.metric(:,:,2)*0;
-    M_samp.metric(:,:,3) = 5000*M_samp.metric(:,:,3) ./ M_samp.metric(:,:,3);
+    %M_samp.metric(:,:,1) = 5000*M_samp.metric(:,:,1) ./ M_samp.metric(:,:,1);
+    %M_samp.metric(:,:,2) = M_samp.metric(:,:,2)*0;
+    %M_samp.metric(:,:,3) = 5000*M_samp.metric(:,:,3) ./ M_samp.metric(:,:,3);
 
     %M_samp.metric(:,:,1) = 1./sqrt((M_samp.x_metric-0.5).^2+(M_samp.y_metric).^2);
     %M_samp.metric(:,:,3) = 1./sqrt((M_samp.x_metric-0.5).^2+(M_samp.y_metric).^2);

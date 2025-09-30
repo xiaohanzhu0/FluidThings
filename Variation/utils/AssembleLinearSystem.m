@@ -340,3 +340,4 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, param)
     res = A*[x1(:); x2(:)] - b;
 end
 
+

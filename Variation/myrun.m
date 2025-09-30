@@ -1,20 +1,23 @@
 close all
 addpath('./','./utils')
 
-cf.problem = 5;
+cf.problem = 4;
 cf.Nx1 = 217*2+1;
 cf.Nx2 = 71*1;
-cf.Nx1 = 40;
-cf.Nx2 = 40;
+cf.Nx1 = 22;
+cf.Nx2 = 21;
 cf.N = cf.Nx1*cf.Nx2;
 cf.alpha = 1.005;
+
+cf.sigma1 = 1;
+cf.sigma2 = 1;
 
 cf.nonlinear = 7;
 cf.fixed_bc = 0;
 cf.omega = 1;
 cf.offdiag = 1;
 cf.max_iter = 500;
-cf.tolerance = 1e-9;
+cf.tolerance = 1e-6;
 cf.smooth = 0;
 
 cf.append_trail = 0;

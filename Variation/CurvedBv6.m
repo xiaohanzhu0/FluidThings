@@ -164,6 +164,8 @@ for iter = 1:cf.max_iter
     [L_exact,~,~,~] = CostExact(x1, x2, M_type, cf.C);
     cost_list = [cost_list, [L_exact; L1; L2; Linf; gtilde2]];
     disp([sigma1, sigma2]);
+    param.sigma1 = sigma1;
+    param.sigma2 = sigma2;
 
     
     if cf.animation == 1 && ~mod(iter,cf.iter_per_frame)

@@ -1,4 +1,79 @@
 
+## Two-stages Mapping
+$X:$ Physical domain (arbitrarily shaped)
+$T:$ Parametrized domain $[0,1]^2$
+$S:$ Computational domain $[0,1]^2$
+
+$X\to T$ (or $T\to X$): purely harmonic, only depends on domain geometry
+$T \to S$ (or $S\to T$): purely metric conforming, only depends on metric
+
+### Harmonic mapping:
+$$\nabla_x^2 t = 0$$
+Which is equivalent with Thompson's equation:
+$$a x_{k,11} - 2b x_{k,12} + cx_{k,22} = 0, \quad k=1,2$$
+$$a = x_{1,2}^2 + x_{2,2}^2,\quad b = x_{1,1}x_{1,2} + x_{2,1}x_{2,2}, \quad c = x_{1,1}^2 + x_{2,1}^2$$
+Solving to get the map $x(t)$ and its Jacobian $J_{ij}$
+
+
+
+### Metric-conforming mapping
+Original Euler-Lagrangian:
+$$2\sum_\alpha \sigma_\alpha^2 \frac{\partial}{\partial s_\alpha} \left(M_{kj} \frac{\partial x_j}{\partial s_\alpha} \right) = \sum_\alpha \frac{\partial M_{ij}}{\partial x_k} \frac{\partial x_i}{\partial s_\alpha} \frac{\partial x_j}{\partial s_\alpha}$$
+Substitute $x$ by $t$:
+$$2\sum_\alpha \sigma_\alpha^2 \frac{\partial}{\partial s_\alpha} \left(M_{kj}(t(x)) \frac{\partial x_j}{\partial t_i} \frac{\partial t_i}{\partial s_\alpha} \right) = \sum_\alpha \frac{\partial M_{ij}(x(t))}{\partial x_k} \left( \frac{\partial x_i}{\partial t_l} \frac{\partial t_l}{\partial s_\alpha}\right)  \left(\frac{\partial x_j}{\partial t_m} \frac{\partial t_m}{\partial s_\alpha} \right)$$
+$$2\sum_\alpha \sigma_\alpha^2 \frac{\partial}{\partial s_\alpha} \left(M_{kj}(t(x)) J_{ji} \frac{\partial t_i}{\partial s_\alpha} \right) = \sum_\alpha \sigma_\alpha^2 \frac{\partial M_{ij}(x(t))}{\partial x_k} \left( J_{il} \frac{\partial t_l}{\partial s_\alpha}\right)  \left(J_{jm} \frac{\partial t_m}{\partial s_\alpha} \right)$$
+
+
+
+### Update:
+$J$ is not necessarily symmetric, so by multiplying $MJ$ we lost the symmetric property. This means that the PDE no longer follows the variational principle. Here is a trick to recover its symmetry:
+
+Multiply by another Jacobian:
+$$2\sum_\alpha \sigma_\alpha^2 J_{kr} \frac{\partial}{\partial s_\alpha}  \left(M_{kj}(t(x)) J_{ji} \frac{\partial t_i}{\partial s_\alpha} \right) = \sum_\alpha J_{kr} \sigma_\alpha^2 \frac{\partial M_{ij}(x(t))}{\partial x_k} \left( J_{il} \frac{\partial t_l}{\partial s_\alpha}\right)  \left(J_{jm} \frac{\partial t_m}{\partial s_\alpha} \right)$$
+Use product rule the LHS becomes:
+$$2\sum_\alpha \sigma_\alpha^2  \frac{\partial}{\partial s_\alpha}  \left( J_{kr}M_{kj}(t(x)) J_{ji} \frac{\partial t_i}{\partial s_\alpha} \right) - \sigma_\alpha^2  \frac{\partial J_{kr}}{\partial s_\alpha}  M_{kj}(t(x)) J_{ji} \frac{\partial t_i}{\partial s_\alpha} $$
+Move the second term to RHS, then the RHS becomes:
+$$\sum_\alpha J_{kr} \sigma_\alpha^2 \frac{\partial M_{ij}(x(t))}{\partial x_k} \left( J_{il} \frac{\partial t_l}{\partial s_\alpha}\right)  \left(J_{jm} \frac{\partial t_m}{\partial s_\alpha} \right)+2\sigma_\alpha^2  \frac{\partial J_{kr}}{\partial s_\alpha}  M_{kj}(t(x)) J_{ji} \frac{\partial t_i}{\partial s_\alpha} $$
+Utilizing $\partial M_{ij} / \partial x_k = (\partial M_{ij} / \partial x_l) J_{ln} J_{nk}$ and $\frac{\partial J_{kr}}{\partial s_\alpha}=\frac{\partial J_{kr}}{\partial t_q}\frac{\partial t_q}{\partial s_\alpha}$ , the RHS becomes:
+$$\sum_\alpha J_{kr} \sigma_\alpha^2 \frac{\partial M_{ij}(x(t))}{\partial x_k} \left( J_{il} \frac{\partial t_l}{\partial s_\alpha}\right)  \left(J_{jm} \frac{\partial t_m}{\partial s_\alpha} \right)+2\sigma_\alpha^2  \frac{\partial J_{kr}}{\partial t_q}   \frac{\partial t_q}{\partial s_\alpha} M_{kj}(t(x)) J_{ji} \frac{\partial t_i}{\partial s_\alpha} $$
+
+Use another product rule such that:
+$$\frac{\partial}{\partial t}(J^T M J) = \frac{\partial J^T}{\partial t} M J + J^T \frac{\partial M}{\partial t} J + J^T M\frac{\partial J}{\partial t} = \frac{\partial J^T}{\partial t} M J + J^T \frac{\partial M}{\partial x}J J + J^T M\frac{\partial J}{\partial t}$$
+The first and third term yield the same result. So in index notation:
+$$\sum_\alpha \sigma_\alpha \frac{\partial}{\partial t_r} (J^T MJ)_{pq} \frac{\partial t_p}{\partial s_\alpha} \frac{\partial t_q}{\partial s_\alpha}$$
+Then eventually we get:
+$$2\sum_\alpha \sigma_\alpha \frac{\partial}{\partial s_\alpha} \left[ (J^T MJ)_{rq} \frac{\partial t_q}{\partial s_\alpha}\right] = \sum_\alpha \sigma_\alpha \frac{\partial}{\partial t_r} (J^T MJ)_{pq} \frac{\partial t_p}{\partial s_\alpha} \frac{\partial t_q}{\partial s_\alpha}$$
+Which is an elliptic equation that follows the variational principle. Compared with the original PDE in $x$ and $s$, we can think of this as the change of basis by transforming the metric tensor $M$ based on $J$.
+
+This can be equivalently interpreted as: transforming the original metric tensor $M$ using the rank-2 covariant tensor transformation rule ($M$ components in $t$ is equal to $J^T MJ$ in $x$).
+
+
+## Playful Toy Examples
+Now we easily can make mixtures of toy examples to explore with.
+
+$X(T)$ on a uniform grid $T$:
+![[Lshape_uniform.png]]
+This is equivalent to the full map $S(X)$ if the metric field is uniform.
+
+----
+
+$T(S)$ on a uniform $S$, given the metric $J^T M J = \begin{bmatrix} (1+15t_1)^{-2} & 0 \\ 0 & 1 \end{bmatrix}$
+
+![[Lshape_tgrid.png]]
+
+The composition result $X(S)$:
+![[Lshape_stretched.png]]
+Which is more equally distributed and better minimize $||misfit||_\infty$ than the original approach.
+
+We can see this approach has the potential to offset the misfit caused by the geometric shape of the domain, if we can artificially modify the transformed metric field.
+
+
+
+
+
+
+
+
 
 Regarding the $p^{-1}$ penalization in the $x(s)$ formulation: we noted that the penalization modifies the divergence form to  
 $\frac{\partial}{\partial s} \big( (1 - p^{-2}) \frac{\partial x}{\partial s} \big) = \text{Source}$.  

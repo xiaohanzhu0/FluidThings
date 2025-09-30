@@ -1,7 +1,56 @@
 clear
+close all
+addpath('./','./utils')
+
+cf.problem = 5;
+cf.Nx1 = 217*2+1;
+cf.Nx2 = 71*1;
+cf.Nx1 = 41;
+cf.Nx2 = 41;
+cf.N = cf.Nx1*cf.Nx2;
+cf.alpha = 1.005;
+
+cf.sigma1 = 1;
+cf.sigma2 = 1;
+
+cf.nonlinear = 7;
+cf.fixed_bc = 0;
+cf.omega = 1;
+cf.offdiag = 1;
+cf.max_iter = 500;
+cf.tolerance = 1e-6;
+cf.smooth = 0;
+
+cf.append_trail = 0;
+cf.new_airfoil = 1;
+
+cf.animation = 1;
+cf.iter_per_frame = 1;
+cf.plot_res = 1;
+cf.pause_time = 0;
+cf.make_gif = 0;
+cf.gif_name = 'failed_example.gif';
+cf.title_name = 'Alternative';
+cf.save_output = 0;
+
+if cf.problem == 1 || cf.problem == 2
+    cf.C = 1;
+end
+
+if cf.nonlinear == 7
+    cf.exact = 0;
+    cf.repulse = 0;
+end
+
+if cf.new_airfoil == 1
+    cf.metric_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/metricField.fields';
+    cf.airfoil_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/airfoil_18M_coarseIJK.grid';
+end
+
+%%
 Nx1 = 41;
 Nx2 = 41;
-problem = 3;
+problem = 5;
 alpha = 1.005;
 append_trail = 0;
 new_airfoil = 1;
@@ -32,7 +81,7 @@ elseif problem == 4
     boundary_points.l = [x1(1,1), x1(end,1); x2(1,1), x2(end,1)]';
     boundary_points.r = [x1(1,end), x1(end,end); x2(1,end), x2(end,end)]';
 elseif problem == 5
-    [x1, x2, M_type] = InitProb5(Nx1, Nx2, alpha, new_airfoil, append_trail);
+    [x1, x2, M_type] = InitProb5(cf);
     x2(1,1) = x2(1,1) + 1e-2;
     boundary_points.b = [x1(1,:); x2(1,:)];
     boundary_points.t = [x1(end,:); x2(end,:)];
@@ -94,7 +143,7 @@ elseif problem == 5
     Mfun = @(x1,x2) [M_type.F11(x1,x2), M_type.F12(x1,x2);
                      M_type.F12(x1,x2), M_type.F22(x1,x2)];
     %bc.x0 = 4; bc.x1 = 2; bc.y0 = 1; bc.y1 = 3;
-    bc.x0 = 2; bc.x1 = 3; bc.y0 = 4; bc.y1 = 1;
+    bc.x0 = 3; bc.x1 = 1; bc.y0 = 2; bc.y1 = 4;
 elseif problem == 6
     
 end
@@ -112,7 +161,7 @@ pdeplot(model2.Mesh, XYData=s2,  ColorMap="jet");
 
 %%
 % Given: p,t, and FEM solutions s1,s2 at nodes p
-N1 = 40; N2 = 40;                     % structured grid size in s-space
+N1 = 160; N2 = 80;                     % structured grid size in s-space
 [Xs, Ys, S1g, S2g, info] = inverse_map_to_grid(p, t, s1, s2, N1, N2);
 
 % Visualize the structured grid in physical space:
