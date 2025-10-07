@@ -9,20 +9,20 @@ if ismember(cf.problem, [1,2])
     [x1_exact, x2_exact]  = meshgrid(s1, s2);
 elseif cf.problem == 3
     M_type = cf.problem;
-    [x1, x2] = InitProb3(cf.Nx1, cf.Nx2, 0.1);
+    [x1, x2] = problems.InitProb3(cf.Nx1, cf.Nx2, 0.1);
     boundary_points.b = [x1(1,:); x2(1,:)];
     boundary_points.t = [x1(end,:); x2(end,:)];
     boundary_points.l = [x1(:,1), x2(:,1)];
     boundary_points.r = [x1(:,end), x2(:,end)];
 elseif cf.problem == 4
     M_type = cf.problem;
-    [x1, x2] = InitProb4(cf.Nx1, cf.Nx2);
+    [x1, x2] = problems.InitProb4(cf.Nx1, cf.Nx2);
     boundary_points.b = [x1(1,:); x2(1,:)];
     boundary_points.t = [x1(end,1), x1(end,end); x2(end,1), x2(end,end)];
     boundary_points.l = [x1(1,1), x1(end,1); x2(1,1), x2(end,1)]';
     boundary_points.r = [x1(1,end), x1(end,end); x2(1,end), x2(end,end)]';
 elseif cf.problem == 5
-    [x1, x2, M_type] = InitProb5(cf);
+    [x1, x2, M_type] = problems.InitProb5(cf);
     boundary_points.b = [x1(1,:); x2(1,:)];
     boundary_points.t = [x1(end,:); x2(end,:)];
     boundary_points.l = [x1(:,1), x2(:,1)];
@@ -52,7 +52,7 @@ elseif cf.problem == 7
     boundary_points.r = [x1(:,end), x2(:,end)];
 elseif cf.problem == 8
     M_type = cf.problem;
-    [x1, x2] = InitProb8(cf.Nx1, cf.Nx2);
+    [x1, x2] = problems.InitProb8(cf.Nx1, cf.Nx2);
     boundary_points.b = [x1(1,:); x2(1,:)];
     boundary_points.t = [x1(end,:); x2(end,:)];
     boundary_points.l = [x1(:,1), x2(:,1)];

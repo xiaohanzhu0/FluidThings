@@ -62,7 +62,7 @@ t2 = linspace(0,1,Nx2);
 dt1 = 1 / Nx1;
 dt2 = 1 / Nx2;
 
-for j=1:20
+for j=1:40
 [dx1dt1, dx2dt2] = DCentral(x1, x2, dt1, dt2);
 [dx2dt1, dx1dt2] = DCentral(x2, x1, dt1, dt2);
 a = dx1dt2.^2 + dx2dt2.^2;
@@ -150,6 +150,7 @@ plot(x1, x2, 'k'); hold on; plot(x1', x2', 'k'); hold off
 pause(0.1)
 end
 %%
+
 % Interpolant of X(T)
 [T1,T2] = ndgrid(linspace(0,1,Nx2),linspace(0,1,Nx1));
 x1_in_t = griddedInterpolant(T1, T2, x1, 'linear');
@@ -169,27 +170,41 @@ J_samp = dx1dt1_samp.*dx2dt2_samp - dx2dt1_samp.*dx1dt2_samp;
 
 %%
 
-Nx1 = 101; Nx2 = 101;
+Nx1 = 151; Nx2 = 51;
 N = Nx1*Nx2;
 S1 = linspace(0,1,Nx1);
 S2 = linspace(0,1,Nx2);
+[S1, S2] = meshgrid(S1, S2);
 t1 = linspace(0,1,Nx1);
 t2 = linspace(0,1,Nx2);
 [t1, t2] = meshgrid(t1, t2);
 
+% Special test: perfect metric from harmonic map
+[g11_aux,g12_aux,g22_aux] = grid_to_metric(x1,x2);
+gdet = g11_aux.*g22_aux - 2*g12_aux;
+g11 = g22_aux ./ gdet;
+g22 = g11_aux ./ gdet;
+g12 = -g12_aux ./ gdet;
+g11Int = scatteredInterpolant(x1(:), x2(:), g11(:), 'linear');
+g12Int = scatteredInterpolant(x1(:), x2(:), g12(:), 'linear');
+g22Int = scatteredInterpolant(x1(:), x2(:), g22(:), 'linear');
 
-M11 = @(x1,x2) ones(size(x1));
-M12 = @(x1,x2) zeros(size(x1));
-M22 = @(x1,x2) ones(size(x1));
+M11 = @(x1,x2) g11Int(x1(:),x2(:));
+M12 = @(x1,x2) g12Int(x1(:),x2(:));
+M22 = @(x1,x2) g22Int(x1(:),x2(:));
+
+%M11 = @(x1,x2) ones(size(x1));
+%M12 = @(x1,x2) zeros(size(x1));
+%M22 = @(x1,x2) ones(size(x1));
 
 %M11 = @(t1,t2) 40000*(1+15*t1).^(-2);
 %M12 = @(t1,t2) zeros(size(t1));
 %M22 = @(t1,t2) ones(size(t1));
 
 
-M11 = @(t1,t2) 1000 - 600*cos(pi*t1).*cos(pi*t2);
-M12 = @(t1,t2) zeros(size(t1));
-M22 = @(t1,t2) 1000 + 600*cos(pi*t1).*cos(pi*t2);
+%M11 = @(t1,t2) 1000 - 600*cos(pi*t1).*cos(pi*t2);
+%M12 = @(t1,t2) zeros(size(t1));
+%M22 = @(t1,t2) 1000 + 600*cos(pi*t1).*cos(pi*t2);
 
 if problem == 5
     M11 = @(x1,x2) M_samp.F11(x1,x2);
@@ -197,7 +212,7 @@ if problem == 5
     M22 = @(x1,x2) M_samp.F22(x1,x2);
 end
 
-for i=1:20
+for i=1:200
     [A, b, res] = AssembleLinearSystemConserve(t1, t2, dx1dt1, dx1dt2, dx2dt1, dx2dt2,...
                                                         M11, M12, M22,x1_in_t,x2_in_t);
     
@@ -206,16 +221,16 @@ for i=1:20
     t1_new = reshape(t1_new, Nx2, Nx1);
     t2_new = reshape(t2_new, Nx2, Nx1);
 
-    t1 = t1 + 1*(t1_new-t1);
-    t2 = t2 + 1*(t2_new-t2);
-    figure(2)
+    t1 = t1 + 0.01*(t1_new-t1);
+    t2 = t2 + 0.01*(t2_new-t2);
+    figure(10)
     plot(t1, t2, 'k'); hold on; plot(t1', t2', 'k'); hold off
     pause(0.1)
 end
 
-figure
+figure(10)
 plot(x1_in_t(t2,t1), x2_in_t(t2,t1), 'k'); hold on; plot(x1_in_t(t2,t1)', x2_in_t(t2,t1)', 'k'); hold off
-%plot(x1_in_t(t1,t2), x2_in_t(t1,t2), 'k'); hold on; plot(x1_in_t(t1,t2)', x2_in_t(t1,t2)', 'k'); hold off
+
 %%
 function [A, b, res] = AssembleLinearSystemConserve(t1, t2, dx1dt1Int, dx1dt2Int, dx2dt1Int, dx2dt2Int,...
                                                     M11Int, M12Int, M22Int,x1_in_t,x2_in_t)
@@ -234,30 +249,30 @@ dx1dt1 = zeros(Nt2+2,Nt1+2); dx1dt2 = zeros(Nt2+2,Nt1+2); dx2dt1 = zeros(Nt2+2,N
 [dt1ds1, dt2ds2] = DCentral(t1, t2, ds1, ds2);
 [dt2ds1, dt1ds2] = DCentral(t2, t1, ds1, ds2);
 
+M11(2:end-1,2:end-1) = M11Int(x1_in_t(t1,t2), x2_in_t(t1,t2));
+M12(2:end-1,2:end-1) = M12Int(x1_in_t(t1,t2), x2_in_t(t1,t2));
+M22(2:end-1,2:end-1) = M22Int(x1_in_t(t1,t2), x2_in_t(t1,t2));
+
+dx1dt1(2:end-1,2:end-1) = dx1dt1Int(t1,t2);
+dx1dt2(2:end-1,2:end-1) = dx1dt2Int(t1,t2);
+dx2dt1(2:end-1,2:end-1) = dx2dt1Int(t1,t2);
+dx2dt2(2:end-1,2:end-1) = dx2dt2Int(t1,t2);
+
+A11 = (dx1dt1.*M11+dx2dt1.*M12).*dx1dt1 + (dx1dt1.*M12+dx2dt1.*M22).*dx2dt1;
+A12 = (dx1dt1.*M11+dx2dt1.*M12).*dx1dt2 + (dx1dt1.*M12+dx2dt1.*M22).*dx2dt2;
+A22 = (dx1dt2.*M11+dx2dt2.*M12).*dx1dt2 + (dx1dt2.*M12+dx2dt2.*M22).*dx2dt2;
+A21 = (dx1dt2.*M11+dx2dt2.*M12).*dx1dt1 + (dx1dt2.*M12+dx2dt2.*M22).*dx2dt1;
+
 %M11(2:end-1,2:end-1) = M11Int(x1_in_t(t1',t2'), x2_in_t(t1',t2'));
 %M12(2:end-1,2:end-1) = M12Int(x1_in_t(t1',t2'), x2_in_t(t1',t2'));
 %M22(2:end-1,2:end-1) = M22Int(x1_in_t(t1',t2'), x2_in_t(t1',t2'));
 
-%dx1dt1(2:end-1,2:end-1) = dx1dt1Int(t1',t2');
-%dx1dt2(2:end-1,2:end-1) = dx1dt2Int(t1',t2');
-%dx2dt1(2:end-1,2:end-1) = dx2dt1Int(t1',t2');
-%dx2dt2(2:end-1,2:end-1) = dx2dt2Int(t1',t2');
-
-%A11 = (dx1dt1.*M11+dx2dt1.*M12).*dx1dt1 + (dx1dt1.*M12+dx2dt1.*M22).*dx2dt1;
-%A12 = (dx1dt1.*M11+dx2dt1.*M12).*dx1dt2 + (dx1dt1.*M12+dx2dt1.*M22).*dx2dt2;
-%A22 = (dx1dt2.*M11+dx2dt2.*M12).*dx1dt2 + (dx1dt2.*M12+dx2dt2.*M22).*dx2dt2;
-%A21 = (dx1dt2.*M11+dx2dt2.*M12).*dx1dt1 + (dx1dt2.*M12+dx2dt2.*M22).*dx2dt1;
-
-%M11(2:end-1,2:end-1) = M11Int(x1_in_t(t1',t2'), x2_in_t(t1',t2'));
-%M12(2:end-1,2:end-1) = M12Int(x1_in_t(t1',t2'), x2_in_t(t1',t2'));
-%M22(2:end-1,2:end-1) = M22Int(x1_in_t(t1',t2'), x2_in_t(t1',t2'));
-
-M11(2:end-1,2:end-1) = M11Int(t1,t2);
-M12(2:end-1,2:end-1) = M12Int(t1,t2);
-M22(2:end-1,2:end-1) = M22Int(t1,t2);
-A11 = M11;
-A12 = M12;
-A22 = M22;
+%M11(2:end-1,2:end-1) = M11Int(t1,t2);
+%M12(2:end-1,2:end-1) = M12Int(t1,t2);
+%M22(2:end-1,2:end-1) = M22Int(t1,t2);
+%A11 = M11;
+%A12 = M12;
+%A22 = M22;
 
 M11_f1 = (A11(:,1:end-1) + A11(:,2:end)) / 2;
 M11_f2 = (A11(1:end-1,:) + A11(2:end,:)) / 2;
@@ -265,6 +280,19 @@ M12_f1 = (A12(:,1:end-1) + A12(:,2:end)) / 2;
 M12_f2 = (A12(1:end-1,:) + A12(2:end,:)) / 2;
 M22_f1 = (A22(:,1:end-1) + A22(:,2:end)) / 2;
 M22_f2 = (A22(1:end-1,:) + A22(2:end,:)) / 2;
+
+%M11_f1 = 0.2*max(M11_f1,[],'all') + M11_f1;
+%M11_f2 = 0.2*max(M11_f2,[],'all') + M11_f2;
+%M12_f1 = 2*max(M12_f1,[],'all') + M12_f1;
+%M12_f2 = 2*max(M12_f2,[],'all') + M12_f2;
+%M22_f1 = 0.2*max(M22_f1,[],'all') + M22_f1;
+%M22_f2 = 0.2*max(M22_f2,[],'all') + M22_f2;
+%M11_f1 = sign(M11_f1).*sqrt(abs(M11_f1));
+%M11_f2 = sign(M11_f2).*sqrt(abs(M11_f2));
+%M12_f1 = sign(M12_f1).*sqrt(abs(M12_f1));
+%M12_f2 = sign(M12_f2).*sqrt(abs(M12_f2));
+%M22_f1 = sign(M22_f1).*sqrt(abs(M22_f1));
+%M22_f2 = sign(M22_f2).*sqrt(abs(M22_f2));
 
 [dM11dt1, dM11dt2] = metric_grad(A11(2:end-1,2:end-1), t1, t2);
 [dM12dt1, dM12dt2] = metric_grad(A12(2:end-1,2:end-1), t1, t2);
@@ -408,6 +436,19 @@ b2(1,1) = 0; b2(1,end) = 0; b2(end,1) = 1; b2(end,end) = 1;
 b = [b1(:); b2(:)];
 res = A*[t1(:); t2(:)] - b;
 
+end
+
+
+function [g11, g12, g22] = grid_to_metric(x1,x2)
+    [Nx1, Nx2] = size(x1);
+    ds1 = 1 / Nx1;
+    ds2 = 1 / Nx2;
+    [dx1ds1, dx2ds2] = DCentral(x1, x2, ds1, ds2);
+    [dx2ds1, dx1ds2] = DCentral(x2, x1, ds1, ds2);
+    
+    g11 = dx1ds1.*dx1ds1 + dx2ds1.*dx2ds1;
+    g12 = dx1ds1.*dx1ds2 + dx2ds1.*dx2ds2;
+    g22 = dx1ds2.*dx1ds2 + dx2ds2.*dx2ds2;
 end
 
 function [dMdx1, dMdx2] = metric_grad(M, x1, x2)

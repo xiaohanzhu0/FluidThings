@@ -1,11 +1,10 @@
 close all
 addpath('./','./utils')
 
-cf.problem = 4;
-cf.Nx1 = 217*2+1;
-cf.Nx2 = 71*1;
-cf.Nx1 = 22;
-cf.Nx2 = 21;
+cf.problem = 3;
+
+cf.Nx1 = 40;
+cf.Nx2 = 40;
 cf.N = cf.Nx1*cf.Nx2;
 cf.alpha = 1.005;
 
