@@ -49,7 +49,10 @@ boundary_points.r = [x1(:,end), x2(:,end)];
 
 figure
 plot(x1, x2, 'k'); hold on; plot(x1', x2', 'k');
+%%
 
+[x1, x2, info] = solve_harmonic(x1, x2, Omega=0.5, ShowPlot=true, ...
+                                BoundaryPoints=boundary_points, PauseTime=0.1);
 
 %%
 
