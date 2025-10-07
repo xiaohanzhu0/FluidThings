@@ -3,8 +3,8 @@ function M = Prob6Metric(x1, x2)
     s1 = x1*cos(theta) + x2*sin(theta);
     s2 = -x1*sin(theta) + x2*cos(theta);
 
-    M11_temp = 40000 * (1 + C*15 * s1).^(-2);
-    M22_temp = 40000 * (1 + C*15 * s2).^(-2);
+    M11_temp = 40000 * (1 + 15 * s1).^(-2);
+    M22_temp = 40000 * (1 + 15 * s2).^(-2);
     M12_temp = zeros(size(s1));
 
     M.M11 = cos(theta)*(M11_temp*cos(theta)-M12_temp*sin(theta)) - sin(theta)*(M12_temp*cos(theta)-M22_temp*sin(theta));

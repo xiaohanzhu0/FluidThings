@@ -1,4 +1,4 @@
-function [A, b, res] = AssembleLinearSystem(x1, x2, M, param)
+function [A, b, res] = AssembleLinearSystem(x1, x2, Mfun, param)
 
     [Nx2, Nx1] = size(x1);
     N = Nx1*Nx2;
@@ -7,6 +7,7 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, M, param)
     sigma1 = 1 / Nx1;
     sigma2 = 1 / Nx2;
 
+    M = Mfun(x1,x2);
     M11=M.M11; M22=M.M22; 
     dM11dx1=M.dM11dx1; dM11dx2=M.dM11dx2; dM22dx1=M.dM22dx1; dM22dx2=M.dM22dx2;
     

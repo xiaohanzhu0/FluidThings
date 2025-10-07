@@ -1,4 +1,4 @@
-function [A, b, res] = AssembleLinearSystemConserve(x1, x2, M, param)
+function [A, b, res] = AssembleLinearSystemConserve(x1, x2, Mfun, param)
 [Nx2, Nx1] = size(x1);
 N = Nx1*Nx2;
 N_all = 2*N;
@@ -9,6 +9,8 @@ sigma1 = 1 / Nx1; %param.sigma1;
 sigma2 = 1 / Nx2; %param.sigma2;
 
 M11 = zeros(Nx2+2,Nx1+2); M12 = zeros(Nx2+2,Nx1+2); M22 = zeros(Nx2+2,Nx1+2);
+
+M = Mfun(x1,x2);
 dM11dx1=M.dM11dx1; dM11dx2=M.dM11dx2; dM22dx1=M.dM22dx1; dM22dx2=M.dM22dx2;
 dM12dx1=M.dM12dx1; dM12dx2=M.dM12dx2;
 [dx1ds1, dx2ds2] = DCentral(x1, x2, ds1, ds2);

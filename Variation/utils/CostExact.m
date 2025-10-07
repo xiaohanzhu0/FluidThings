@@ -1,7 +1,7 @@
-function [L, gtilde2, sigma1, sigma2] = CostExact(x1, x2, M_type, C)
+function [L, gtilde2, sigma1, sigma2] = CostExact(x1, x2, Mfun)
     [Nx1, Nx2] = size(x1);
 
-    M = GetM(x1, x2, M_type, C);
+    M = Mfun(x1,x2);
     [dx1ds1, dx2ds2] = DCentral(x1, x2, 1/Nx1, 1/Nx2);
     [dx2ds1, dx1ds2] = DCentral(x2, x1, 1/Nx1, 1/Nx2);
 

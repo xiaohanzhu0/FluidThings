@@ -81,14 +81,15 @@ res_list = [];
 err_list = [];
 %%
 cf.forDx = 0;
-M = GetM(x1, x2, M_type, cf.C);
-[A, b] = AssembleLinearSystem(x1, x2, M, cf);
+Mfun = GetM(cf.problem);
+%M = GetM(x1, x2, M_type, cf.C);
+[A, b] = AssembleLinearSystem(x1, x2, Mfun, cf);
 res = norm(A*[x1(:);x2(:)] - b);
 
 err = [x1(:);x2(:)];
 res_list = [res_list, norm(res)];
-[L1, L2, Linf, gtilde2] = Cost(x1, x2, M_type, cf.C);
-[L_exact,~,~,~] = CostExact(x1, x2, M_type, cf.C);
+[L1, L2, Linf, gtilde2] = Cost(x1, x2, Mfun, cf.C);
+[L_exact,~,~,~] = CostExact(x1, x2, Mfun);
 cost_list = [[L_exact; L1; L2; Linf; gtilde2]];
 
 disp('Started iterations');
@@ -134,7 +135,7 @@ for iter = 1:cf.max_iter
         res = res(2:end-1, 2:end-1);
 
     elseif cf.nonlinear == 7
-        [A, b, res] = AssembleLinearSystemConserve(x1, x2, M, cf);
+        [A, b, res] = AssembleLinearSystemConserve(x1, x2, Mfun, cf);
         x_new = A \ b;
         x1_new = reshape(x_new(1:N), cf.Nx2, cf.Nx1);
         x2_new = reshape(x_new(N+1:end), cf.Nx2, cf.Nx1);
@@ -160,8 +161,8 @@ for iter = 1:cf.max_iter
         [x1, x2] = UpdateCorrection(x1, x2, boundary_points);
     end
 
-    [L1, L2, Linf, gtilde2, sigma1, sigma2] = Cost(x1, x2, M_type, cf.C);
-    [L_exact,~,~,~] = CostExact(x1, x2, M_type, cf.C);
+    [L1, L2, Linf, gtilde2, sigma1, sigma2] = Cost(x1, x2, Mfun, cf.C);
+    [L_exact,~,~,~] = CostExact(x1, x2, Mfun);
     cost_list = [cost_list, [L_exact; L1; L2; Linf; gtilde2]];
     disp([sigma1, sigma2]);
     param.sigma1 = sigma1;
