@@ -1,12 +1,8 @@
-x1 = linspace(0,1,40);
-x2 = linspace(0,1,40);
-[x1,x2] = meshgrid(x1,x2);
-
-Mfun = GetM(1);
-M = Mfun(x1,x2);
-[eigvals, eigvecs] = eig2x2_metric(M);
-h = plotMetricEigenvectors(eigvals, eigvecs, x1, x2, ColorMode='colormap', BaseScale=0.02);
-
+function h = plot_metric(x1, x2, M)
+    [eigvals, eigvecs] = eig2x2_metric(M);
+    h = plotMetricEigenvectors(eigvals, eigvecs, x1, x2, ColorMode='colormap', BaseScale=0.02);
+    colorbar;
+end
 
 function [eigvals, eigvecs] = eig2x2_metric(M)
     [Nx1,Nx2] = size(M.M11);
@@ -69,7 +65,8 @@ addParameter(p, 'Centered', false, @(x)islogical(x)&&isscalar(x));
 addParameter(p, 'Scale', 1, @(x)isnumeric(x)&&isscalar(x)&&x>0);
 addParameter(p, 'ColorMode', 'length', @(s)ischar(s)||isstring(s));
 addParameter(p, 'BaseScale', 1, @(x)isnumeric(x)&&isscalar(x)&&x>0);
-addParameter(p, 'CMap', parula(256));
+%addParameter(p, 'CMap', parula(256));
+addParameter(p, 'CMap', winter(256));
 addParameter(p, 'CLim', [], @(x)isnumeric(x)&&numel(x)==2);
 addParameter(p, 'Color1', [0 0.4470 0.7410]);
 addParameter(p, 'Color2', [0.8500 0.3250 0.0980]);
