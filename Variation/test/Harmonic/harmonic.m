@@ -1,5 +1,5 @@
 clear
-problem = 5;
+problem = 8;
 s1 = linspace(0, 1, 100);
 s2 = linspace(0, 1, 100);
 [x1, x2] = meshgrid(s1, s2);
@@ -36,7 +36,7 @@ if problem == 5
 end
 
 if problem == 8
-    [x1, x2] = InitProb8(80, 40);
+    [x1, x2] = problems.InitProb8(80, 40);
     x1 = flip(x1,2);
     x2 = flip(x2,2);
     cf.Nt1 = size(x1,2);
@@ -78,7 +78,7 @@ L_mix = kron(spdiags([-e/2, e/2], [-1, 1], Nx1, Nx1), spdiags([-e/2, e/2], [-1, 
 A = L - 2*L_mix;
 A = blkdiag(A, A);
 
-
+%{
 % Apply boundary conditions -----------------------------------------------
 id = GetIndex(Nx1, Nx2);
 t_bottom = GetBoundaryTangent(x1(1,:), x2(1,:), 1);
@@ -136,8 +136,13 @@ b1(1,1) = x1(1,1); b1(end,1) = x1(end,1); b1(1,end) = x1(1,end); b1(end,end) = x
 b2(1,1) = x2(1,1); b2(end,1) = x2(end,1); b2(1,end) = x2(1,end); b2(end,end) = x2(end,end);
 
 % -------------------------------------------------------------------------
+%}
+b1 = zeros(Nx2, Nx1);
+b2 = zeros(Nx2, Nx1);
+[A,b] = boundary_contribution_correction(x1,x2,A,b1,b2);
+%x_new = A \ [b1(:); b2(:)];
+x_new = A \ b;
 
-x_new = A \ [b1(:); b2(:)];
 x1_new = reshape(x_new(1:N), Nx2, Nx1);
 x2_new = reshape(x_new(N+1:end), Nx2, Nx1);
 x1 = x1 + 0.5*(x1_new - x1);
