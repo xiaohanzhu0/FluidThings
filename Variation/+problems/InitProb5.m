@@ -1,4 +1,4 @@
-function [T1, T2, M_samp] = InitProb5(cf)
+function [T1, T2, M_samp, Mfun] = InitProb5(cf)
     if cf.new_airfoil
         [data, ~, ~, ~, ~] = readTurtleFields(cf.metric_datapath);
         [x_cv, ~, ~, ~, ~, ~, ~, ~, ~, ~] = readTurtleGrid(cf.airfoil_datapath);
@@ -47,51 +47,19 @@ function [T1, T2, M_samp] = InitProb5(cf)
         M_samp.metric(:,:,2) = conv2(h,h,M_samp.metric(:,:,2),'same');
         M_samp.metric(:,:,3) = conv2(h,h,M_samp.metric(:,:,3),'same');
     end
-    %M_samp_copy = M_samp;
-    %Metric1 = cat(3, M_samp.metric(:,:,1), M_samp.metric(:,:,2));
-    %Metric2 = cat(3, M_samp.metric(:,:,2), M_samp.metric(:,:,3));
-    %Metric = cat(4, Metric1, Metric2);
-    %Metric = permute(Metric, [3,4,1,2]);
-    %Metric = grade_structured_mesh(M_samp.x_metric, M_samp.y_metric, Metric, 20, 50, 1e-4);
-    %Metric = permute(Metric, [3,4,1,2]);
-    %M_samp.metric(:,:,1) = Metric(:,:,1,1);
-    %M_samp.metric(:,:,2) = Metric(:,:,1,2);
-    %M_samp.metric(:,:,3) = Metric(:,:,2,2);
 
-    %M_samp.metric(:,:,1) = M_samp.metric(:,:,1) .* linspace(10,1,size(M_samp.metric(:,:,1),2)).^2;
-    %M_samp.metric(:,:,2) = M_samp.metric(:,:,2) .* linspace(10,1,size(M_samp.metric(:,:,1),2)).^2;
-    %M_samp.metric(:,:,3) = conv2(h,h,M_samp.metric(:,:,3),'same') .* linspace(10,1,size(M_samp.metric(:,:,1),2)).^2;
-
-    %M_samp.metric(:,:,1) = 5000*M_samp.metric(:,:,1) ./ M_samp.metric(:,:,1);
-    %M_samp.metric(:,:,2) = M_samp.metric(:,:,2)*0;
-    %M_samp.metric(:,:,3) = 5000*M_samp.metric(:,:,3) ./ M_samp.metric(:,:,3);
-
-    %M_samp.metric(:,:,1) = 1./sqrt((M_samp.x_metric-0.5).^2+(M_samp.y_metric).^2);
-    %M_samp.metric(:,:,3) = 1./sqrt((M_samp.x_metric-0.5).^2+(M_samp.y_metric).^2);
-    %M_samp.metric = flip(M_samp.metric, 1);
-
-    %Metric1 = cat(3, M_samp.metric(:,:,1), M_samp.metric(:,:,2));
-    %Metric2 = cat(3, M_samp.metric(:,:,2), M_samp.metric(:,:,3));
-    %Metric = cat(4, Metric1, Metric2);
-    %Metric_ = grade_metric_field_iterative(Metric, 2, 10);
 
     M_samp.F11 = scatteredInterpolant(M_samp.x_metric(:),M_samp.y_metric(:),reshape(M_samp.metric(:,:,1),[],1));
     M_samp.F12 = scatteredInterpolant(M_samp.x_metric(:),M_samp.y_metric(:),reshape(M_samp.metric(:,:,2),[],1));
     M_samp.F22 = scatteredInterpolant(M_samp.x_metric(:),M_samp.y_metric(:),reshape(M_samp.metric(:,:,3),[],1));
     
-    %% Processing sampled boundary points
-    
+    Mfun = @(x1,x2) Prob5Metric(x1, x2, M_samp);
+    function M = Prob5Metric(x1,x2,M_samp)
+        M.M11 = M_samp.F11(x1,x2);
+        M.M12 = M_samp.F12(x1,x2);
+        M.M22 = M_samp.F22(x1,x2);
+    end
 
-    %[b1,b2,b3,b4,aux] = get_foil_boundary(0);
-
-%%
-    %scatter(b1(:,1),b1(:,2)); hold on
-    %scatter(b2(:,1),b2(:,2)); hold on
-    %scatter(b3(:,1),b3(:,2)); hold on
-    %scatter(b4(:,1),b4(:,2)); hold on
-
-
-    %[T1, T2] = transfiniteInterp(b1', b2', b3', b4', aux');
     gd = Hyperbolic(cf.Nx1, cf.Nx2, cf.alpha, cf.append_trail);
     T1 = gd.x';
     T2 = gd.y';

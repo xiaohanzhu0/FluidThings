@@ -1,190 +1,73 @@
 clear
-problem = 8;
-s1 = linspace(0, 1, 100);
-s2 = linspace(0, 1, 100);
-[x1, x2] = meshgrid(s1, s2);
+problem = 5;
 
+Nx1 = 201;
+Nx2 = 51;
 
-if problem == 3
-    [x1, x2] = InitProb3(100, 100, 0.1);
-    boundary_points.b = [x1(1,:); x2(1,:)];
-    boundary_points.t = [x1(end,1), x1(end,end); x2(end,1), x2(end,end)];
-    boundary_points.l = [x1(1,1), x1(end,1); x2(1,1), x2(end,1)]';
-    boundary_points.r = [x1(1,end), x1(end,end); x2(1,end), x2(end,end)]';
-end
-if problem == 4
-    [x1, x2] = InitProb4(100, 100);
-    boundary_points.b = [x1(1,:); x2(1,:)];
-    boundary_points.t = [x1(end,1), x1(end,end); x2(end,1), x2(end,end)];
-    boundary_points.l = [x1(1,1), x1(end,1); x2(1,1), x2(end,1)]';
-    boundary_points.r = [x1(1,end), x1(end,end); x2(1,end), x2(end,end)]';
-end
-if problem == 5
-    cf.new_airfoil = 1;
-    cf.metric_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/metricField.fields';
-    cf.airfoil_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/airfoil_18M_coarseIJK.grid';
-    cf.Nx1 = 201; cf.Nx2 = 51;
-    cf.alpha = 1.005; cf.append_trail = 0;
-    [x1, x2, M_samp] = InitProb5(cf);
-    boundary_points.b = [x1(1,:); x2(1,:)];
-    boundary_points.t = [x1(end,:); x2(end,:)];
-    boundary_points.l = [x1(:,1), x2(:,1)];
-    boundary_points.r = [x1(:,end), x2(:,end)];
-    cf.Nx1 = size(x1,2);
-    cf.Nx2 = size(x1,1);
-    N = cf.Nx1 * cf.Nx2;
-end
-
-if problem == 8
-    [x1, x2] = problems.InitProb8(80, 40);
-    x1 = flip(x1,2);
-    x2 = flip(x2,2);
-    cf.Nt1 = size(x1,2);
-    cf.Nx2 = size(x1,1);
-end
-boundary_points.b = [x1(1,:); x2(1,:)];
-boundary_points.t = [x1(end,:); x2(end,:)];
-boundary_points.l = [x1(:,1), x2(:,1)];
-boundary_points.r = [x1(:,end), x2(:,end)];
+[x1,x2,Mfun] = problems.Initialization(problem,Nx1,Nx2);
+boundary_points = extract_boundary_points(x1,x2);
 
 figure
 plot(x1, x2, 'k'); hold on; plot(x1', x2', 'k');
-%%
+[Theta, Theta_1, Theta_2, Theta_inf] = analysis.skewness(x1, x2);
 
 [x1, x2, info] = solve_harmonic(x1, x2, Omega=0.5, ShowPlot=true, ...
                                 BoundaryPoints=boundary_points, PauseTime=0.1);
+[Theta, Theta_1, Theta_2, Theta_inf] = analysis.skewness(x1, x2);
 
 %%
 
 [Nx2, Nx1] = size(x1);
-N = Nx1*Nx2;
-t1 = linspace(0,1,Nx1);
-t2 = linspace(0,1,Nx2);
-[t1, t2] = meshgrid(t1,t2);
-
-dt1 = 1 / Nx1;
-dt2 = 1 / Nx2;
-
-for j=1:40
-[dx1dt1, dx2dt2] = DCentral(x1, x2, dt1, dt2);
-[dx2dt1, dx1dt2] = DCentral(x2, x1, dt1, dt2);
-a = dx1dt2.^2 + dx2dt2.^2;
-b = dx1dt1.*dx1dt2 + dx2dt1.*dx2dt2;
-c = dx1dt1.^2 + dx2dt1.^2;
-
-e = ones(N,1);
-D2x = spdiags([e, -2*e, e], [-1, 0, 1], Nx1, Nx1);
-D2y = spdiags([e, -2*e, e], [-1, 0, 1], Nx2, Nx2);
-
-L = kron(D2x,speye(Nx2)).*a(:) / dt1^2 + kron(speye(Nx1),D2y).*c(:) / dt2^2;
-L_mix = kron(spdiags([-e/2, e/2], [-1, 1], Nx1, Nx1), spdiags([-e/2, e/2], [-1, 1], Nx2, Nx2)).*b(:) / dt1 / dt2;
-A = L - 2*L_mix;
-A = blkdiag(A, A);
-
-%{
-% Apply boundary conditions -----------------------------------------------
-id = GetIndex(Nx1, Nx2);
-t_bottom = GetBoundaryTangent(x1(1,:), x2(1,:), 1);
-t_top = GetBoundaryTangent(x1(end,:), x2(end,:), 1);
-t_left = GetBoundaryTangent(x1(:,1), x2(:,1), 1);
-t_right = GetBoundaryTangent(x1(:,end), x2(:,end), 1);
-
-n_bottom = [-t_bottom(2,:); t_bottom(1,:)];
-n_top = [-t_top(2,:); t_top(1,:)];
-n_left = [-t_left(2,:); t_left(1,:)];
-n_right = [-t_right(2,:); t_right(1,:)];
-
-I = [id.l, id.l, N+id.l, N+id.l, N+id.l, N+id.l, N+id.l, N+id.l, ...
-     id.r, id.r, N+id.r, N+id.r, N+id.r, N+id.r, N+id.r, N+id.r, ...
-     id.b, id.b, N+id.b, N+id.b, N+id.b, N+id.b, N+id.b, N+id.b, ...
-     id.t, id.t, N+id.t, N+id.t, N+id.t, N+id.t, N+id.t, N+id.t];
-
-J = [id.l, N+id.l, id.l, N+id.l, 1*Nx2+id.l, N+1*Nx2+id.l, 2*Nx2+id.l, N+2*Nx2+id.l, ...
-     id.r, N+id.r, id.r, N+id.r, -1*Nx2+id.r, N-1*Nx2+id.r, -2*Nx2+id.r, N-2*Nx2+id.r, ...
-     id.b, N+id.b, id.b, N+id.b, 1+id.b, N+1+id.b, 2+id.b, N+2+id.b, ...
-     id.t, N+id.t, id.t, N+id.t, -1+id.t, N-1+id.t, -2+id.t, N-2+id.t];
-
-V = [n_left(1,2:end-1), n_left(2,2:end-1), t_left(1,2:end-1), t_left(2,2:end-1), ...
-     -4/3*t_left(1,2:end-1), -4/3*t_left(2,2:end-1), 1/3*t_left(1,2:end-1), 1/3*t_left(2,2:end-1), ...
-     n_right(1,2:end-1), n_right(2,2:end-1), t_right(1,2:end-1), t_right(2,2:end-1), ...
-     -4/3*t_right(1,2:end-1), -4/3*t_right(2,2:end-1), 1/3*t_right(1,2:end-1), 1/3*t_right(2,2:end-1), ...
-     n_bottom(1,2:end-1), n_bottom(2,2:end-1), t_bottom(1,2:end-1), t_bottom(2,2:end-1), ...
-     -4/3*t_bottom(1,2:end-1), -4/3*t_bottom(2,2:end-1), 1/3*t_bottom(1,2:end-1), 1/3*t_bottom(2,2:end-1), ...
-     n_top(1,2:end-1), n_top(2,2:end-1), t_top(1,2:end-1), t_top(2,2:end-1), ...
-     -4/3*t_top(1,2:end-1), -4/3*t_top(2,2:end-1), 1/3*t_top(1,2:end-1), 1/3*t_top(2,2:end-1)];
-
-B = sparse(I,J,V,size(A,1),size(A,2));
-A(id.l,:) = 0;
-A(id.l+N,:) = 0;
-A(id.r,:) = 0;
-A(id.r+N,:) = 0;
-A(id.b,:) = 0;
-A(id.b+N,:) = 0;
-A(id.t,:) = 0;
-A(id.t+N,:) = 0;
-A = A + B;
-
-for i = id.corner; A(i, :) = 0; A(i, i) = 1; end
-for i = N+id.corner; A(i, :) = 0; A(i, i) = 1; end
-
-b1 = zeros(Nx2, Nx1);
-b2 = zeros(Nx2, Nx1);
-b1(:,1) = x1(:,1).*n_left(1,:)' + x2(:,1).*n_left(2,:)';
-b1(:,end) = x1(:,end).*n_right(1,:)' + x2(:,end).*n_right(2,:)';
-b1(1,:) = x1(1,:).*n_bottom(1,:) + x2(1,:).*n_bottom(2,:);
-b1(end,:) = x1(end,:).*n_top(1,:) + x2(end,:).*n_top(2,:);
-b2(:,1) = 0; b2(:,end) = 0; b2(1,:) = 0; b2(end,:) = 0;
-
-b1(1,1) = x1(1,1); b1(end,1) = x1(end,1); b1(1,end) = x1(1,end); b1(end,end) = x1(end,end);
-b2(1,1) = x2(1,1); b2(end,1) = x2(end,1); b2(1,end) = x2(1,end); b2(end,end) = x2(end,end);
-
-% -------------------------------------------------------------------------
-%}
-b1 = zeros(Nx2, Nx1);
-b2 = zeros(Nx2, Nx1);
-[A,b] = boundary_contribution_correction(x1,x2,A,b1,b2);
-%x_new = A \ [b1(:); b2(:)];
-x_new = A \ b;
-
-x1_new = reshape(x_new(1:N), Nx2, Nx1);
-x2_new = reshape(x_new(N+1:end), Nx2, Nx1);
-x1 = x1 + 0.5*(x1_new - x1);
-x2 = x2 + 0.5*(x2_new - x2);
-
-[x1, x2] = UpdateCorrection(x1, x2, boundary_points);
-
-figure(2)
-plot(x1, x2, 'k'); hold on; plot(x1', x2', 'k'); hold off
-pause(0.1)
-end
-%%
-
 % Interpolant of X(T)
-[T1,T2] = ndgrid(linspace(0,1,Nx2),linspace(0,1,Nx1));
-x1_in_t = griddedInterpolant(T1, T2, x1, 'linear');
-x2_in_t = griddedInterpolant(T1, T2, x2, 'linear');
+[T1,T2] = ndgrid(linspace(0,1,Nx1),linspace(0,1,Nx2));
+x1_in_t = griddedInterpolant(T1, T2, x1', 'linear');
+x2_in_t = griddedInterpolant(T1, T2, x2', 'linear');
 
 
 % Interpolant of J = dX(t)/dT
-[dx1dt1_samp, dx2dt2_samp] = DCentral(x1, x2, dt1, dt2);
-[dx2dt1_samp, dx1dt2_samp] = DCentral(x2, x1, dt1, dt2);
+[dx1dt1_samp, dx2dt2_samp] = DCentral(x1, x2, 1/Nx1, 1/Nx2);
+[dx2dt1_samp, dx1dt2_samp] = DCentral(x2, x1, 1/Nx1, 1/Nx2);
 
-dx1dt1 = griddedInterpolant(T1, T2, dx1dt1_samp, 'linear');
-dx1dt2 = griddedInterpolant(T1, T2, dx1dt2_samp, 'linear');
-dx2dt1 = griddedInterpolant(T1, T2, dx2dt1_samp, 'linear');
-dx2dt2 = griddedInterpolant(T1, T2, dx2dt2_samp, 'linear');
+dx1dt1Fun = griddedInterpolant(T1, T2, dx1dt1_samp', 'linear');
+dx1dt2Fun = griddedInterpolant(T1, T2, dx1dt2_samp', 'linear');
+dx2dt1Fun = griddedInterpolant(T1, T2, dx2dt1_samp', 'linear');
+dx2dt2Fun = griddedInterpolant(T1, T2, dx2dt2_samp', 'linear');
 
 J_samp = dx1dt1_samp.*dx2dt2_samp - dx2dt1_samp.*dx1dt2_samp;
 
+
 %%
 
-Nx1 = 151; Nx2 = 51;
-N = Nx1*Nx2;
-S1 = linspace(0,1,Nx1);
-S2 = linspace(0,1,Nx2);
+t1 = linspace(0,1,41);
+t2 = linspace(0,1,41);
+[t1, t2] = ndgrid(t1, t2);
+
+x1 = x1_in_t(t1,t2)';
+x2 = x2_in_t(t1,t2)';
+
+M = Mfun(x1, x2);
+
+dx1dt1 = dx1dt1Fun(t1, t2)';
+dx1dt2 = dx1dt2Fun(t1, t2)';
+dx2dt1 = dx2dt1Fun(t1, t2)';
+dx2dt2 = dx2dt2Fun(t1, t2)';
+
+Mp.M11 = (dx1dt1.*M.M11+dx2dt1.*M.M12).*dx1dt1 + (dx1dt1.*M.M12+dx2dt1.*M.M22).*dx2dt1;
+Mp.M12 = (dx1dt1.*M.M11+dx2dt1.*M.M12).*dx1dt2 + (dx1dt1.*M.M12+dx2dt1.*M.M22).*dx2dt2;
+Mp.M22 = (dx1dt2.*M.M11+dx2dt2.*M.M12).*dx1dt2 + (dx1dt2.*M.M12+dx2dt2.*M.M22).*dx2dt2;
+
+analysis.plot_metric(x1, x2, M);
+analysis.plot_metric(t1, t2, Mp);
+
+%%
+
+Nt1 = 151; Nt2 = 51;
+N = Nt1*Nt2;
+S1 = linspace(0,1,Nt1);
+S2 = linspace(0,1,Nt2);
 [S1, S2] = meshgrid(S1, S2);
-t1 = linspace(0,1,Nx1);
-t2 = linspace(0,1,Nx2);
+t1 = linspace(0,1,Nt1);
+t2 = linspace(0,1,Nt2);
 [t1, t2] = meshgrid(t1, t2);
 
 % Special test: perfect metric from harmonic map
@@ -201,18 +84,6 @@ M11 = @(x1,x2) g11Int(x1(:),x2(:));
 M12 = @(x1,x2) g12Int(x1(:),x2(:));
 M22 = @(x1,x2) g22Int(x1(:),x2(:));
 
-%M11 = @(x1,x2) ones(size(x1));
-%M12 = @(x1,x2) zeros(size(x1));
-%M22 = @(x1,x2) ones(size(x1));
-
-%M11 = @(t1,t2) 40000*(1+15*t1).^(-2);
-%M12 = @(t1,t2) zeros(size(t1));
-%M22 = @(t1,t2) ones(size(t1));
-
-
-%M11 = @(t1,t2) 1000 - 600*cos(pi*t1).*cos(pi*t2);
-%M12 = @(t1,t2) zeros(size(t1));
-%M22 = @(t1,t2) 1000 + 600*cos(pi*t1).*cos(pi*t2);
 
 if problem == 5
     M11 = @(x1,x2) M_samp.F11(x1,x2);
@@ -305,7 +176,6 @@ M22_f2 = (A22(1:end-1,:) + A22(2:end,:)) / 2;
 [dM11dt1, dM11dt2] = metric_grad(A11(2:end-1,2:end-1), t1, t2);
 [dM12dt1, dM12dt2] = metric_grad(A12(2:end-1,2:end-1), t1, t2);
 [dM22dt1, dM22dt2] = metric_grad(A22(2:end-1,2:end-1), t1, t2);
-
 
 
 e = ones(N,1);

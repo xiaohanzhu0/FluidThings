@@ -38,6 +38,7 @@ function [x1, x2, info] = solve_harmonic(x1, x2, varargin)
 
         if opt.ShowPlot
             figure(fig_harmonic);
+            axis equal
             plot(x1, x2, 'k'); hold on; plot(x1', x2', 'k'); hold off
             pause(opt.PauseTime);
         end

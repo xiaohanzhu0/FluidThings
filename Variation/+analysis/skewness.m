@@ -15,6 +15,7 @@ function [Theta, Theta_1, Theta_2, Theta_inf] = skewness(x1, x2)
     xlabel(sprintf('$\\left\\|\\Theta\\right\\|_1=%.3g,\\; \\left\\|\\Theta\\right\\|_2=%.3g,\\; \\left\\|\\Theta\\right\\|_{\\infty}=%.3g$', ...
                Theta_1, Theta_2, Theta_inf), ...
                'Interpreter','latex');
+    axis equal;
 end
 
 

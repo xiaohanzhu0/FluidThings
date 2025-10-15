@@ -11,7 +11,6 @@ trail_factor = 1.05;
 N = 50;
 j = 1:N;
 
-%x = 0.5 - 0.5*cos(pi*(N-j)/(N-1));
 x = 1 - cos(pi*(N-j)/(N-1)/2);
 x = [x(1), x(3:end)];
 
