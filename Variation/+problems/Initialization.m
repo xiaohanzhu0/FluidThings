@@ -25,5 +25,10 @@ function [x1,x2,Mfun] = Initialization(problem,Nx1,Nx2)
     elseif problem == 8
         [x1,x2] = problems.InitProb8(Nx1,Nx2);
         Mfun = @(x1,x2) problems.Prob8Metric(x1, x2);
+    elseif problem == 9
+        cf.block_idx = 1;
+        cf.metric_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/metricField.fields';
+        cf.airfoil_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/airfoil_18M_coarseIJK.grid';
+        [x1, x2, M_samp, Mfun] = problems.InitProb9(cf);
     end
 end

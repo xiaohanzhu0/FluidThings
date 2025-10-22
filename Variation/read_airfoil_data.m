@@ -1,8 +1,8 @@
 
-[data, vartype, varname, ncvs, gridfile] = readTurtleFields('metricField.fields');
+[data, vartype, varname, ncvs, gridfile] = readTurtleFields('~/Files/data/Mesh_Generation/Airfoil/foil2/metricField.fields');
 [x_cv, x_no, x_fa, ncvs, ...
           bndNames, bnd_block_begin_end, ...
-          int_block_begin_end_A, int_block_begin_end_B, int_offset, int_angle] = readTurtleGrid('airfoil_18M_coarseIJK.grid');
+          int_block_begin_end_A, int_block_begin_end_B, int_offset, int_angle] = readTurtleGrid('~/Files/data/Mesh_Generation/Airfoil/foil2/airfoil_18M_coarseIJK.grid');
 
 aux = data{1,1}{1,6}(:,:,:,1:2,1:2);
 dim = size(aux);

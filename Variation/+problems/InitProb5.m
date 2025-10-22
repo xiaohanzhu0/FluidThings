@@ -42,17 +42,18 @@ function [T1, T2, M_samp, Mfun] = InitProb5(cf)
 
     h = gaussian1d(50, 100);
     
-    for i=1:5
-        M_samp.metric(:,:,1) = conv2(h,h,M_samp.metric(:,:,1),'same');
-        M_samp.metric(:,:,2) = conv2(h,h,M_samp.metric(:,:,2),'same');
-        M_samp.metric(:,:,3) = conv2(h,h,M_samp.metric(:,:,3),'same');
-    end
-
+    %for i=1:100
+    %    M_samp.metric(:,:,1) = conv2(h,h,M_samp.metric(:,:,1),'same');
+    %    M_samp.metric(:,:,2) = conv2(h,h,M_samp.metric(:,:,2),'same');
+    %    M_samp.metric(:,:,3) = conv2(h,h,M_samp.metric(:,:,3),'same');
+    %end
+    
 
     M_samp.F11 = scatteredInterpolant(M_samp.x_metric(:),M_samp.y_metric(:),reshape(M_samp.metric(:,:,1),[],1));
     M_samp.F12 = scatteredInterpolant(M_samp.x_metric(:),M_samp.y_metric(:),reshape(M_samp.metric(:,:,2),[],1));
     M_samp.F22 = scatteredInterpolant(M_samp.x_metric(:),M_samp.y_metric(:),reshape(M_samp.metric(:,:,3),[],1));
     
+
     Mfun = @(x1,x2) Prob5Metric(x1, x2, M_samp);
     function M = Prob5Metric(x1,x2,M_samp)
         M.M11 = M_samp.F11(x1,x2);

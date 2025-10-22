@@ -3,9 +3,19 @@ function [h1,h2,h3] = plot_metric(x1, x2, M)
     figure; colorbar;
     h1 = plotMetricEigenvectors(eigvals, eigvecs, x1, x2, ColorMode='colormap', BaseScale=0.02, ColorBy='sqrtlambda', CMap=winter(256));
     figure; colorbar;
+    efficient_plot()
     h2 = plotMetricEigenvectors(eigvals, eigvecs, x1, x2, ColorMode='colormap', BaseScale=0.02, ColorBy='sqrt_ratio', CMap=copper(256));
     figure; colorbar;
+    efficient_plot()
     h3 = plotMetricEigenvectors(eigvals, eigvecs, x1, x2, ColorMode='colormap', BaseScale=0.02, ColorBy='axis_deviation', CMap=autumn(256));
+end
+
+
+function efficient_plot()
+fig = gcf; ax = gca;
+
+disableDefaultInteractivity(ax);
+ax.Interactions = [zoomInteraction];
 end
 
 function [eigvals, eigvecs] = eig2x2_metric(M)
@@ -233,7 +243,8 @@ else
 end
 
 if ~holdState, hold off; end
-axis equal tight; box on
+axis equal tight; 
+box on
 %xlabel('x'); ylabel('y');
 
 % title + legend

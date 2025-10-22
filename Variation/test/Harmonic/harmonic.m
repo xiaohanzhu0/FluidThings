@@ -1,45 +1,48 @@
 clear
 problem = 5;
+orthongonal_project = 1;
 
-Nx1 = 201;
+Nx1 = 151;
 Nx2 = 51;
 
 [x1,x2,Mfun] = problems.Initialization(problem,Nx1,Nx2);
+
+
 boundary_points = extract_boundary_points(x1,x2);
 
 figure
 plot(x1, x2, 'k'); hold on; plot(x1', x2', 'k');
-[Theta, Theta_1, Theta_2, Theta_inf] = analysis.skewness(x1, x2);
+%[Theta, Theta_1, Theta_2, Theta_inf] = analysis.skewness(x1, x2);
 
 [x1, x2, info] = solve_harmonic(x1, x2, Omega=0.5, ShowPlot=true, ...
                                 BoundaryPoints=boundary_points, PauseTime=0.1);
-[Theta, Theta_1, Theta_2, Theta_inf] = analysis.skewness(x1, x2);
+%[Theta, Theta_1, Theta_2, Theta_inf] = analysis.skewness(x1, x2);
 
 %%
 
 [Nx2, Nx1] = size(x1);
 % Interpolant of X(T)
 [T1,T2] = ndgrid(linspace(0,1,Nx1),linspace(0,1,Nx2));
-x1_in_t = griddedInterpolant(T1, T2, x1', 'linear');
-x2_in_t = griddedInterpolant(T1, T2, x2', 'linear');
+x1_in_t = griddedInterpolant(T1, T2, x1', 'cubic');
+x2_in_t = griddedInterpolant(T1, T2, x2', 'cubic');
 
 
 % Interpolant of J = dX(t)/dT
 [dx1dt1_samp, dx2dt2_samp] = DCentral(x1, x2, 1/Nx1, 1/Nx2);
 [dx2dt1_samp, dx1dt2_samp] = DCentral(x2, x1, 1/Nx1, 1/Nx2);
 
-dx1dt1Fun = griddedInterpolant(T1, T2, dx1dt1_samp', 'linear');
-dx1dt2Fun = griddedInterpolant(T1, T2, dx1dt2_samp', 'linear');
-dx2dt1Fun = griddedInterpolant(T1, T2, dx2dt1_samp', 'linear');
-dx2dt2Fun = griddedInterpolant(T1, T2, dx2dt2_samp', 'linear');
+dx1dt1Fun = griddedInterpolant(T1, T2, dx1dt1_samp', 'cubic');
+dx1dt2Fun = griddedInterpolant(T1, T2, dx1dt2_samp', 'cubic');
+dx2dt1Fun = griddedInterpolant(T1, T2, dx2dt1_samp', 'cubic');
+dx2dt2Fun = griddedInterpolant(T1, T2, dx2dt2_samp', 'cubic');
 
 J_samp = dx1dt1_samp.*dx2dt2_samp - dx2dt1_samp.*dx1dt2_samp;
 
 
 %%
 
-t1 = linspace(0,1,41);
-t2 = linspace(0,1,41);
+t1 = linspace(0,1,101);
+t2 = linspace(0,1,101);
 [t1, t2] = ndgrid(t1, t2);
 
 x1 = x1_in_t(t1,t2)';
@@ -53,15 +56,41 @@ dx2dt1 = dx2dt1Fun(t1, t2)';
 dx2dt2 = dx2dt2Fun(t1, t2)';
 
 Mp.M11 = (dx1dt1.*M.M11+dx2dt1.*M.M12).*dx1dt1 + (dx1dt1.*M.M12+dx2dt1.*M.M22).*dx2dt1;
-Mp.M12 = (dx1dt1.*M.M11+dx2dt1.*M.M12).*dx1dt2 + (dx1dt1.*M.M12+dx2dt1.*M.M22).*dx2dt2;
 Mp.M22 = (dx1dt2.*M.M11+dx2dt2.*M.M12).*dx1dt2 + (dx1dt2.*M.M12+dx2dt2.*M.M22).*dx2dt2;
+Mp.M12 = (dx1dt1.*M.M11+dx2dt1.*M.M12).*dx1dt2 + (dx1dt1.*M.M12+dx2dt1.*M.M22).*dx2dt2;
 
-analysis.plot_metric(x1, x2, M);
-analysis.plot_metric(t1, t2, Mp);
 
+Mp11 = griddedInterpolant(t1, t2, Mp.M11', 'cubic');
+Mp22 = griddedInterpolant(t1, t2, Mp.M22', 'cubic');
+Mp12 = griddedInterpolant(t1, t2, Mp.M12', 'cubic');
+
+%analysis.plot_metric(x1, x2, M);
+%analysis.plot_metric(t1', t2', Mp);
+%% Solve inverse instead
+detJ = Mp.M11.*M.M22 - Mp.M12.^2;
+Maux.M11 = Mp.M22 ./ detJ;
+Maux.M22 = Mp.M11 ./ detJ;
+Maux.M12 = -Mp.M12 ./ detJ;
+Mp = Maux;
+
+for i=1:10
+    Mp.M11(:,1) = Mp.M11(:,2); Mp.M11(:,end) = Mp.M11(:,end-1);
+    Mp.M22(1,:) = Mp.M22(2,:); Mp.M22(end,:) = Mp.M22(end-1,:);
+
+    Mp.M11(:,2:end-1) = (Mp.M11(:,1:end-2) + Mp.M11(:,3:end)) / 2;
+    Mp.M22(:,2:end-1) = (Mp.M22(:,1:end-2) + Mp.M22(:,3:end)) / 2;
+    Mp.M11(2:end-1,:) = (Mp.M11(1:end-2,:) + Mp.M11(3:end,:)) / 2;
+    Mp.M22(2:end-1,:) = (Mp.M22(1:end-2,:) + Mp.M22(3:end,:)) / 2;
+end
+
+
+Mp11 = griddedInterpolant(t1, t2, Mp.M11', 'cubic');
+Mp22 = griddedInterpolant(t1, t2, Mp.M22', 'cubic');
+Mp12 = griddedInterpolant(t1, t2, Mp.M12', 'cubic');
 %%
 
-Nt1 = 151; Nt2 = 51;
+Nt1 = 401; Nt2 = 201;
+%Nt1 = 10; Nt2 = 10;
 N = Nt1*Nt2;
 S1 = linspace(0,1,Nt1);
 S2 = linspace(0,1,Nt2);
@@ -70,45 +99,48 @@ t1 = linspace(0,1,Nt1);
 t2 = linspace(0,1,Nt2);
 [t1, t2] = meshgrid(t1, t2);
 
-% Special test: perfect metric from harmonic map
-[g11_aux,g12_aux,g22_aux] = grid_to_metric(x1,x2);
-gdet = g11_aux.*g22_aux - 2*g12_aux;
-g11 = g22_aux ./ gdet;
-g22 = g11_aux ./ gdet;
-g12 = -g12_aux ./ gdet;
-g11Int = scatteredInterpolant(x1(:), x2(:), g11(:), 'linear');
-g12Int = scatteredInterpolant(x1(:), x2(:), g12(:), 'linear');
-g22Int = scatteredInterpolant(x1(:), x2(:), g22(:), 'linear');
-
-M11 = @(x1,x2) g11Int(x1(:),x2(:));
-M12 = @(x1,x2) g12Int(x1(:),x2(:));
-M22 = @(x1,x2) g22Int(x1(:),x2(:));
 
 
-if problem == 5
-    M11 = @(x1,x2) M_samp.F11(x1,x2);
-    M12 = @(x1,x2) M_samp.F12(x1,x2);
-    M22 = @(x1,x2) M_samp.F22(x1,x2);
-end
+%%
+[s1, s2] = AssembleLinearSystemDual(t1, t2, Mp11, Mp12, Mp22);
+%s1(:,2:end-1) = -2*s1(:,2:end-1);
+%s2(2:end-1,:) = -2*s2(2:end-1,:);
+
+s1_samp = linspace(0,1,100);
+s2_samp = linspace(0,1,100);
+[s1_samp,s2_samp] = meshgrid(s1_samp,s2_samp);
+t1_samp = griddata(s1,s2,t1,s1_samp,s2_samp);
+t2_samp = griddata(s1,s2,t2,s1_samp,s2_samp);
+
+figure
+plot(s1, s2, 'k'); hold on; plot(s1', s2', 'k'); hold off
+figure
+plot(t1_samp, t2_samp, 'k'); hold on; plot(t1_samp', t2_samp', 'k'); hold off
+figure
+plot(x1_in_t(t1_samp,t2_samp), x2_in_t(t1_samp,t2_samp), 'k'); hold on; plot(x1_in_t(t1_samp,t2_samp)', x2_in_t(t1_samp,t2_samp)', 'k'); hold off
+%%
+
 
 for i=1:200
+    %[A, b, res] = AssembleLinearSystem(t1, t2, Mp11, Mp12, Mp22);
     [A, b, res] = AssembleLinearSystemConserve(t1, t2, dx1dt1, dx1dt2, dx2dt1, dx2dt2,...
-                                                        M11, M12, M22,x1_in_t,x2_in_t);
+                                                        Mp11, Mp12, Mp22,x1_in_t,x2_in_t);
     
     t_new = A \ b;
     t1_new = t_new(1:N); t2_new = t_new(N+1:end);
-    t1_new = reshape(t1_new, Nx2, Nx1);
-    t2_new = reshape(t2_new, Nx2, Nx1);
+    t1_new = reshape(t1_new, Nt2, Nt1);
+    t2_new = reshape(t2_new, Nt2, Nt1);
 
-    t1 = t1 + 0.01*(t1_new-t1);
-    t2 = t2 + 0.01*(t2_new-t2);
+    t1 = t1 + 1*(t1_new-t1);
+    t2 = t2 + 1*(t2_new-t2);
     figure(10)
     plot(t1, t2, 'k'); hold on; plot(t1', t2', 'k'); hold off
+    figure(11)
+    plot(x1_in_t(t1,t2), x2_in_t(t1,t2), 'k'); hold on; plot(x1_in_t(t1,t2)', x2_in_t(t1,t2)', 'k'); hold off
     pause(0.1)
 end
 
-figure(10)
-plot(x1_in_t(t2,t1), x2_in_t(t2,t1), 'k'); hold on; plot(x1_in_t(t2,t1)', x2_in_t(t2,t1)', 'k'); hold off
+
 
 %%
 function [A, b, res] = AssembleLinearSystemConserve(t1, t2, dx1dt1Int, dx1dt2Int, dx2dt1Int, dx2dt2Int,...
@@ -119,8 +151,8 @@ N_all = 2*N;
 
 ds1 = 1 / Nt1;
 ds2 = 1 / Nt2;
-sigma1 = 1 / Nt1;
-sigma2 = 1 / Nt2;
+sigma1 = 1;
+sigma2 = 1;
 
 M11 = zeros(Nt2+2,Nt1+2); M12 = zeros(Nt2+2,Nt1+2); M22 = zeros(Nt2+2,Nt1+2);
 dx1dt1 = zeros(Nt2+2,Nt1+2); dx1dt2 = zeros(Nt2+2,Nt1+2); dx2dt1 = zeros(Nt2+2,Nt1+2); dx2dt2 = zeros(Nt2+2,Nt1+2);
@@ -128,30 +160,14 @@ dx1dt1 = zeros(Nt2+2,Nt1+2); dx1dt2 = zeros(Nt2+2,Nt1+2); dx2dt1 = zeros(Nt2+2,N
 [dt1ds1, dt2ds2] = DCentral(t1, t2, ds1, ds2);
 [dt2ds1, dt1ds2] = DCentral(t2, t1, ds1, ds2);
 
-M11(2:end-1,2:end-1) = M11Int(x1_in_t(t1,t2), x2_in_t(t1,t2));
-M12(2:end-1,2:end-1) = M12Int(x1_in_t(t1,t2), x2_in_t(t1,t2));
-M22(2:end-1,2:end-1) = M22Int(x1_in_t(t1,t2), x2_in_t(t1,t2));
 
-dx1dt1(2:end-1,2:end-1) = dx1dt1Int(t1,t2);
-dx1dt2(2:end-1,2:end-1) = dx1dt2Int(t1,t2);
-dx2dt1(2:end-1,2:end-1) = dx2dt1Int(t1,t2);
-dx2dt2(2:end-1,2:end-1) = dx2dt2Int(t1,t2);
+M11(2:end-1,2:end-1) = M11Int(t1,t2);
+M12(2:end-1,2:end-1) = M12Int(t1,t2);
+M22(2:end-1,2:end-1) = M22Int(t1,t2);
 
-A11 = (dx1dt1.*M11+dx2dt1.*M12).*dx1dt1 + (dx1dt1.*M12+dx2dt1.*M22).*dx2dt1;
-A12 = (dx1dt1.*M11+dx2dt1.*M12).*dx1dt2 + (dx1dt1.*M12+dx2dt1.*M22).*dx2dt2;
-A22 = (dx1dt2.*M11+dx2dt2.*M12).*dx1dt2 + (dx1dt2.*M12+dx2dt2.*M22).*dx2dt2;
-A21 = (dx1dt2.*M11+dx2dt2.*M12).*dx1dt1 + (dx1dt2.*M12+dx2dt2.*M22).*dx2dt1;
-
-%M11(2:end-1,2:end-1) = M11Int(x1_in_t(t1',t2'), x2_in_t(t1',t2'));
-%M12(2:end-1,2:end-1) = M12Int(x1_in_t(t1',t2'), x2_in_t(t1',t2'));
-%M22(2:end-1,2:end-1) = M22Int(x1_in_t(t1',t2'), x2_in_t(t1',t2'));
-
-%M11(2:end-1,2:end-1) = M11Int(t1,t2);
-%M12(2:end-1,2:end-1) = M12Int(t1,t2);
-%M22(2:end-1,2:end-1) = M22Int(t1,t2);
-%A11 = M11;
-%A12 = M12;
-%A22 = M22;
+A11 = M11;
+A12 = M12;
+A22 = M22;
 
 M11_f1 = (A11(:,1:end-1) + A11(:,2:end)) / 2;
 M11_f2 = (A11(1:end-1,:) + A11(2:end,:)) / 2;
@@ -160,22 +176,25 @@ M12_f2 = (A12(1:end-1,:) + A12(2:end,:)) / 2;
 M22_f1 = (A22(:,1:end-1) + A22(:,2:end)) / 2;
 M22_f2 = (A22(1:end-1,:) + A22(2:end,:)) / 2;
 
-%M11_f1 = 0.2*max(M11_f1,[],'all') + M11_f1;
-%M11_f2 = 0.2*max(M11_f2,[],'all') + M11_f2;
-%M12_f1 = 2*max(M12_f1,[],'all') + M12_f1;
-%M12_f2 = 2*max(M12_f2,[],'all') + M12_f2;
-%M22_f1 = 0.2*max(M22_f1,[],'all') + M22_f1;
-%M22_f2 = 0.2*max(M22_f2,[],'all') + M22_f2;
-%M11_f1 = sign(M11_f1).*sqrt(abs(M11_f1));
-%M11_f2 = sign(M11_f2).*sqrt(abs(M11_f2));
-%M12_f1 = sign(M12_f1).*sqrt(abs(M12_f1));
-%M12_f2 = sign(M12_f2).*sqrt(abs(M12_f2));
-%M22_f1 = sign(M22_f1).*sqrt(abs(M22_f1));
-%M22_f2 = sign(M22_f2).*sqrt(abs(M22_f2));
+%M11_f1 = 2 ./ (1./A11(:,1:end-1) + 1./A11(:,2:end));
+%M11_f2 = 2 ./ (1./A11(1:end-1,:) + 1./A11(2:end,:));
+%M12_f1 = 2 ./ (1./A12(:,1:end-1) + 1./A12(:,2:end));
+%M12_f2 = 2 ./ (1./A12(1:end-1,:) + 1./A12(2:end,:));
+%M22_f1 = 2 ./ (1./A22(:,1:end-1) + 1./A22(:,2:end));
+%M22_f2 = 2 ./ (1./A22(1:end-1,:) + 1./A22(2:end,:));
+
 
 [dM11dt1, dM11dt2] = metric_grad(A11(2:end-1,2:end-1), t1, t2);
 [dM12dt1, dM12dt2] = metric_grad(A12(2:end-1,2:end-1), t1, t2);
 [dM22dt1, dM22dt2] = metric_grad(A22(2:end-1,2:end-1), t1, t2);
+
+dM11dt1 = dM11dt1*0;
+dM11dt2 = dM11dt2*0;
+dM12dt1 = dM12dt1*0;
+dM12dt2 = dM12dt2*0;
+dM22dt1 = dM22dt1*0;
+dM22dt2 = dM22dt2*0;
+
 
 
 e = ones(N,1);
@@ -317,90 +336,104 @@ res = A*[t1(:); t2(:)] - b;
 end
 
 
-function [g11, g12, g22] = grid_to_metric(x1,x2)
-    [Nx1, Nx2] = size(x1);
-    ds1 = 1 / Nx1;
-    ds2 = 1 / Nx2;
-    [dx1ds1, dx2ds2] = DCentral(x1, x2, ds1, ds2);
-    [dx2ds1, dx1ds2] = DCentral(x2, x1, ds1, ds2);
+function [A, b, res] = AssembleLinearSystem(x1, x2, M11Int, M12Int, M22Int)
+
+    [Nx2, Nx1] = size(x1);
+    N = Nx1*Nx2;
+    N_all = 2*N;
+
+    sigma1 = 1 / Nx1;
+    sigma2 = 1 / Nx2;
+
+    M11 = M11Int(x1,x2);
+    M12 = M12Int(x1,x2);
+    M22 = M22Int(x1,x2);
+
+    [dM11dx1, dM11dx2] = metric_grad(M11, x1, x2);
+    [dM12dx1, dM12dx2] = metric_grad(M12, x1, x2);
+    [dM22dx1, dM22dx2] = metric_grad(M22, x1, x2);
+
+    dM11dx1 = dM11dx1*0;
+    dM11dx2 = dM11dx2*0;
+    dM12dx1 = dM12dx1*0;
+    dM12dx2 = dM12dx2*0;
+    dM22dx1 = dM22dx1*0;
+    dM22dx2 = dM22dx2*0;
+
+
+    [dx1ds1, dx2ds2] = DCentral(x1, x2, sigma1, sigma2);
+    [dx2ds1, dx1ds2] = DCentral(x2, x1, sigma1, sigma2);
+
+    e = ones(N,1);
+    L = spdiags([e, e, -4*e, e, e], [-Nx2, -1, 0, 1, Nx2], N, N);
+
+    A = sparse(N_all, N_all);
+    A(1:N,1:N) = A(1:N,1:N) - 2*L.*M11(:);
+    A(N+1:end,N+1:end) = A(N+1:end,N+1:end) - 2*L.*M22(:);
+
+    A(1:N,N+1:end) = A(1:N,N+1:end) - 2*L.*M12(:);
+    A(N+1:end,1:N) = A(N+1:end,1:N) - 2*L.*M12(:);
+
+
+    id = GetIndex(Nx1, Nx2);
+    A(id.l,:) = 0; A(id.l+N,:) = 0;
+    A(id.r,:) = 0; A(id.r+N,:) = 0;
+    A(id.b,:) = 0; 
+    A(id.b+N,:) = 0;
+    A(id.t,:) = 0;
+    A(id.t+N,:) = 0;
     
-    g11 = dx1ds1.*dx1ds1 + dx2ds1.*dx2ds1;
-    g12 = dx1ds1.*dx1ds2 + dx2ds1.*dx2ds2;
-    g22 = dx1ds2.*dx1ds2 + dx2ds2.*dx2ds2;
+    A(id.l,id.l) = eye(length(id.l));
+    A(id.r,id.r) = eye(length(id.r));
+    A(id.b+N,id.b+N) = eye(length(id.b));
+    A(id.t+N,id.t+N) = eye(length(id.t));
+    for i=id.b
+        A(i,i) = 1; A(i,i+1) = -1;
+    end
+    for i=id.t
+        A(i,i) = 1; A(i,i-1) = -1;
+    end
+    for i=id.l+N
+        A(i,i) = 1; A(i,i+Nx2) = -1;
+    end
+    for i=id.r+N
+        A(i,i) = 1; A(i,i-Nx2) = -1;
+    end
+    
+    
+    for i = id.corner; A(i, :) = 0; A(i, i) = 1; end
+    for i = N+id.corner; A(i, :) = 0; A(i, i) = 1; end
+
+    % Assemble the interior vector b
+    b1 = zeros(Nx2, Nx1);
+    b2 = zeros(Nx2, Nx1);
+    
+
+    b1 = b1 + dM11dx1.* ((dx1ds1.^2)*sigma1^2 + (dx1ds2.^2)*sigma2^2);
+    b1 = b1 + 2*dM11dx2.*(dx2ds1.*dx1ds1*sigma1^2 + dx2ds2.*dx1ds2*sigma2^2);
+    b1 = b1 - dM22dx1.*(dx2ds1.^2*sigma1^2 + dx2ds2.^2*sigma2^2);
+    b1 = b1 + 2*dM12dx2.* ((dx2ds1.^2)*sigma1^2 + (dx2ds2.^2)*sigma2^2);
+
+
+    b2 = b2 + dM22dx2.* ((dx2ds1.^2)*sigma1^2 + (dx2ds2.^2)*sigma2^2);
+    b2 = b2 + 2*dM22dx1.*(dx1ds1.*dx2ds1*sigma1^2 + dx1ds2.*dx2ds2*sigma2^2);
+    b2 = b2 - dM11dx2.*(dx1ds1.^2*sigma1^2 + dx1ds2.^2*sigma2^2);
+    b2 = b2 + 2*dM12dx1.* ((dx1ds1.^2)*sigma1^2 + (dx1ds2.^2)*sigma2^2);
+
+    b1(:,1) = 0;
+    b1(:,end) = 1;
+    b1(1,:) = 0;
+    b1(end,:) = 0;
+    b2(:,1) = 0;
+    b2(:,end) = 0;
+    b2(1,:) = 0;
+    b2(end,:) = 1;
+    
+    b1(1,1) = 0; b1(1,end) = 1; b1(end,1) = 0; b1(end,end) = 1;
+    b2(1,1) = 0; b2(1,end) = 0; b2(end,1) = 1; b2(end,end) = 1;
+
+    b = [b1(:); b2(:)];
+    res = A*[x1(:); x2(:)] - b;
 end
 
-function [dMdx1, dMdx2] = metric_grad(M, x1, x2)
-%METRIC_GRADIENT  Compute ∂M/∂x₁ and ∂M/∂x₂ on a non‐uniform, skewed grid
-%
-%   [dMdx1, dMdx2] = metric_gradient(M, x1, x2)
-%
-%   Inputs:
-%     M  – a 2D array of size (nrows × ncols), representing one component of the metric tensor
-%     x1 – an (nrows × ncols) array of the physical x₁‐coordinates at each node
-%     x2 – an (nrows × ncols) array of the physical x₂‐coordinates at each node
-%
-%   Outputs:
-%     dMdx1 – an (nrows × ncols) array containing ∂M/∂x₁ at interior nodes (zeros on the 4‐point boundary)
-%     dMdx2 – an (nrows × ncols) array containing ∂M/∂x₂ at interior nodes (zeros on the 4‐point boundary)
-%
-%   This function uses a 5‐point, chain‐rule stencil.  At each interior index (i,j):
-%     – Δξx₁ = x₁(i+1,j) − x₁(i−1,j)
-%     – Δξx₂ = x₂(i+1,j) − x₂(i−1,j)
-%     – Δηx₁ = x₁(i,j+1) − x₁(i,j−1)
-%     – Δηx₂ = x₂(i,j+1) − x₂(i,j−1)
-%     – ΔξM  = M(i+1,j)   − M(i−1,j)
-%     – ΔηM  = M(i,j+1)   − M(i,j−1)
-%
-%   Then one solves the 2×2 linear system:
-%       [ Δξx₁   Δξx₂ ] [∂M/∂x₁]   = [ ΔξM ]
-%       [ Δηx₁   Δηx₂ ] [∂M/∂x₂]     [ ΔηM ]
-%
-%   This is vectorized so that all interior points are handled in one shot.
 
-[nrows, ncols] = size(M);
-
-% Pre‐allocate output arrays (zeros on boundary)
-dMdx1 = zeros(nrows, ncols);
-dMdx2 = zeros(nrows, ncols);
-
-% Define index ranges for “interior” (skip the 1‐pixel boundary)
-%   i = 2:(nrows−1),  j = 2:(ncols−1)
-%
-% To vectorize, we form sub‐blocks of size (nrows−2)×(ncols−2):
-%   x1(i+1,j) corresponds to x1(3:end,   2:end−1)
-%   x1(i−1,j) corresponds to x1(1:end−2, 2:end−1)
-%   x1(i,j+1) corresponds to x1(2:end−1, 3:end)
-%   x1(i,j−1) corresponds to x1(2:end−1, 1:end−2)
-%   etc.
-
-% 1) Compute Δξx₁, Δξx₂, Δηx₁, Δηx₂ over all interior points at once
-deta_x1  = x1(3:end,   2:end-1) - x1(1:end-2, 2:end-1);   % (i+1,j) − (i−1,j)
-deta_x2  = x2(3:end,   2:end-1) - x2(1:end-2, 2:end-1);
-
-dxi_x1 = x1(2:end-1, 3:end  ) - x1(2:end-1, 1:end-2);   % (i,j+1) − (i,j−1)
-dxi_x2 = x2(2:end-1, 3:end  ) - x2(2:end-1, 1:end-2);
-
-% 2) Compute ΔξM and ΔηM over the same interior stencil
-deta_M  = M(3:end,   2:end-1) - M(1:end-2, 2:end-1);   % M(i+1,j) − M(i−1,j)
-dxi_M = M(2:end-1, 3:end  ) - M(2:end-1, 1:end-2);   % M(i,j+1) − M(i,j−1)
-
-% 3) Build the determinant of the 2×2 Jacobian for each interior point
-%       detJ = Δξx₁ * Δηx₂ − Δξx₂ * Δηx₁
-detJ = dxi_x1 .* deta_x2 - dxi_x2 .* deta_x1;
-
-% 4) Compute each component of the inverse of J = [Δξx₁ Δξx₂; Δηx₁ Δηx₂]
-%    inv(J) = (1/detJ) * [ Δηx₂  −Δξx₂;  −Δηx₁  Δξx₁ ]
-inv11 =  deta_x2 ./ detJ;    % coefficient mapping ΔξM → ∂M/∂x₁
-inv12 = -dxi_x2 ./ detJ;     % coefficient mapping ΔηM → ∂M/∂x₁
-inv21 = -deta_x1 ./ detJ;    % coefficient mapping ΔξM → ∂M/∂x₂
-inv22 =  dxi_x1 ./ detJ;     % coefficient mapping ΔηM → ∂M/∂x₂
-
-% 5) Compute ∂M/∂x₁ and ∂M/∂x₂ on the interior block
-dMdx1_int = inv11 .* dxi_M + inv12 .* deta_M;    % (nrows−2)×(ncols−2)
-dMdx2_int = inv21 .* dxi_M + inv22 .* deta_M;
-
-% 6) Scatter back into the full‐size arrays (leaving zeros on the 1‐pixel boundary)
-dMdx1(2:end-1, 2:end-1) = dMdx1_int;
-dMdx2(2:end-1, 2:end-1) = dMdx2_int;
-
-end
