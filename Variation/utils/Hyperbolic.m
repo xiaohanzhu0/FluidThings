@@ -127,9 +127,9 @@ function gd = solve_hyperbolic(gd, params)
         w = M \ RHS;
         w = reshape(w, 2, params.JMAX)';
 
-        for ii=10:k
-            w = [w(1,:); w(1:end-2,:)/3 + w(2:end-1,:)/3 + w(3:end,:)/3 ;w(end,:)];
-        end
+        %if k > 5
+        %    w = [w(1,:); w(1:end-2,:)/3 + w(2:end-1,:)/3 + w(3:end,:)/3 ;w(end,:)];
+        %end
         
         gd.x(:,k) = w(:,1);
         gd.y(:,k) = w(:,2);

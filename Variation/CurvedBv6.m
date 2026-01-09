@@ -82,15 +82,16 @@ err_list = [];
 %%
 cf.forDx = 0;
 Mfun = GetM(cf.problem);
-%M = GetM(x1, x2, M_type, cf.C);
 [A, b] = AssembleLinearSystem(x1, x2, Mfun, cf);
 res = norm(A*[x1(:);x2(:)] - b);
 
 err = [x1(:);x2(:)];
 res_list = [res_list, norm(res)];
-[L1, L2, Linf, gtilde2] = Cost(x1, x2, Mfun, cf.C);
-[L_exact,~,~,~] = CostExact(x1, x2, Mfun);
-cost_list = [[L_exact; L1; L2; Linf; gtilde2]];
+%[L1, L2] = Cost(x1, x2, Mfun);
+%[L_exact,~,~,~] = CostExact(x1, x2, Mfun);
+%L1 = norm(L1(:));
+%L2 = norm(L2(:));
+%cost_list = [[L_exact; L1; L2]];
 
 disp('Started iterations');
 for iter = 1:cf.max_iter
@@ -122,7 +123,7 @@ for iter = 1:cf.max_iter
         dx1 = reshape(dx(1:N), cf.Nx2, cf.Nx1);
         dx2 = reshape(dx(N+1:end), cf.Nx2, cf.Nx1);
     elseif cf.nonlinear == 1 || cf.nonlinear == 2
-        [A, b, res] = AssembleLinearSystem(x1, x2, M, cf);
+        [A, b, res] = AssembleLinearSystem(x1, x2, Mfun, cf);
         x_new = A \ b;
         x1_new = reshape(x_new(1:N), cf.Nx2, cf.Nx1);
         x2_new = reshape(x_new(N+1:end), cf.Nx2, cf.Nx1);
@@ -161,12 +162,12 @@ for iter = 1:cf.max_iter
         [x1, x2] = UpdateCorrection(x1, x2, boundary_points);
     end
 
-    [L1, L2, Linf, gtilde2, sigma1, sigma2] = Cost(x1, x2, Mfun, cf.C);
-    [L_exact,~,~,~] = CostExact(x1, x2, Mfun);
-    cost_list = [cost_list, [L_exact; L1; L2; Linf; gtilde2]];
-    disp([sigma1, sigma2]);
-    param.sigma1 = sigma1;
-    param.sigma2 = sigma2;
+    %[L1, L2, Linf, gtilde2, sigma1, sigma2] = Cost(x1, x2, Mfun, cf.C);
+    %[L_exact,~,~,~] = CostExact(x1, x2, Mfun);
+    %cost_list = [cost_list, [L_exact; L1; L2; Linf; gtilde2]];
+    %disp([sigma1, sigma2]);
+    %param.sigma1 = sigma1;
+    %param.sigma2 = sigma2;
 
     
     if cf.animation == 1 && ~mod(iter,cf.iter_per_frame)
@@ -202,16 +203,16 @@ for iter = 1:cf.max_iter
         semilogy(res_list); grid on
         title([cf.title_name, ' residual']); hold off
 
-        figure(17); clf; set(gca, 'YScale', 'log');
-        grid on; hold on;
-        h1 = semilogy(cost_list(1,:)/cost_list(1,1),'-','LineWidth',1.5);
-        h2 = semilogy(cost_list(2,:)/cost_list(2,1),'-','LineWidth',1.5);
-        h3 = semilogy(cost_list(3,:)/cost_list(3,1),'-','LineWidth',1.5);
-        h4 = semilogy(cost_list(4,:)/cost_list(4,1),'-','LineWidth',1.5);
-        h5 = semilogy(cost_list(5,:),'-','LineWidth',1.5);
-        legend([h1 h2 h3 h4 h5],{'L_exact','L1','L2','L∞','Ortho'},'Location','best');
-        title([cf.title_name,' cost']);
-        hold off;
+        %figure(17); clf; set(gca, 'YScale', 'log');
+        %grid on; hold on;
+        %h1 = semilogy(cost_list(1,:)/cost_list(1,1),'-','LineWidth',1.5);
+        %h2 = semilogy(cost_list(2,:)/cost_list(2,1),'-','LineWidth',1.5);
+        %h3 = semilogy(cost_list(3,:)/cost_list(3,1),'-','LineWidth',1.5);
+        %h4 = semilogy(cost_list(4,:)/cost_list(4,1),'-','LineWidth',1.5);
+        %h5 = semilogy(cost_list(5,:),'-','LineWidth',1.5);
+        %legend([h1 h2 h3 h4 h5],{'L_exact','L1','L2','L∞','Ortho'},'Location','best');
+        %title([cf.title_name,' cost']);
+        %hold off;
     end
 
     
@@ -224,8 +225,8 @@ for iter = 1:cf.max_iter
         if ~isValid; disp('Warning: cell overlap expected'); end
     end
 
-    disp(['Iteration: ', num2str(iter), ', Residual: ', num2str(res_list(end)), ...
-          ', Cost: ', num2str(cost_list(end))]);
+    %disp(['Iteration: ', num2str(iter), ', Residual: ', num2str(res_list(end)), ...
+    %      ', Cost: ', num2str(cost_list(end))]);
 end
 
 if cf.save_output

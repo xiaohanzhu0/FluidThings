@@ -1,6 +1,47 @@
 
 
 
+Thompson's equation derivation
+
+
+The Laplace–Beltrami gradient of an arbitrary function $f$ is:
+$$\nabla_x f = \frac{\partial f}{\partial s_j} \frac{\partial s_j}{\partial x_i} $$
+The Laplace–Beltrami divergence of an arbitrary function $v$ is:
+$$\text{div} (v) = \frac{1}{J} \frac{\partial}{\partial s_i}\left(J v_i \right)$$
+Then Laplace–Beltrami Laplacian is:
+$$\Delta_x f = \frac{1}{J} \frac{\partial}{\partial s_i}\left(J \frac{\partial \phi}{\partial s_j} \frac{\partial s_j}{\partial x_i}  \right) = \frac{1}{J} \frac{\partial}{\partial s_i}\left(J a^{ij}\frac{\partial \phi}{\partial s_j}   \right)$$
+
+Let $a_{ij} = \frac{\partial x_k}{\partial s_i} \frac{\partial x_k}{\partial s_j}$ be the covariant metric tensor, then we can write the Laplacian in terms of the contravariant tensor $a^{ij}$
+
+Let $\phi$ be an arbitrary scaler function and its subscript represents derivatives in physical space. 
+$$\Delta_x \phi = \frac{1}{J} \left[ \frac{\partial}{\partial s_1} (Ja^{11}\phi_{1} + Ja^{12}\phi_{2}) +\frac{\partial}{\partial s_2} (Ja^{12}\phi_{1} + Ja^{22}\phi_{2})\right]$$
+Or expand the derivatives:
+$$\Delta_x \phi = a^{11} \phi_{11} + 2a^{12}\phi_{12} + a^{22}\phi_{22} + \frac{1}{J} \left[ \frac{\partial}{\partial s_1} (Ja^{11}) \phi_1 + \frac{\partial}{\partial s_1} (Ja^{12}) \phi_2 + \frac{\partial}{\partial s_2} (Ja^{12}) \phi_1 + \frac{\partial}{\partial s_2} (Ja^{22}) \phi_2 \right]$$
+Let $\phi =s_1$ and $\phi =s_2$, from the first equation:
+$$\Delta_x s_1 = \frac{1}{J} \left[ \frac{\partial}{\partial s_1} (Ja^{11} ) +\frac{\partial}{\partial s_2} (Ja^{12} )\right]$$
+$$\Delta_x s_2 = \frac{1}{J} \left[ \frac{\partial}{\partial s_1} (Ja^{12} ) +\frac{\partial}{\partial s_2} (Ja^{22} )\right]$$
+Let $\phi=x_1$ from the second equation:
+$$\Delta_x x = a^{11} x_{11} + 2a^{12}x_{12} + a^{22}x_{22} + \frac{1}{J} \left[ \frac{\partial}{\partial s_1} (Ja^{11}) x_1 + \frac{\partial}{\partial s_1} (Ja^{12}) x_2 + \frac{\partial}{\partial s_2} (Ja^{12}) x_1 + \frac{\partial}{\partial s_2} (Ja^{22}) x_2 \right]$$
+Or:
+$$\Delta_x x = a^{11} x_{11} + 2a^{12}x_{12} + a^{22}x_{22} + (\Delta_x s_1) x_1 + (\Delta_x s_2) x_2 $$
+Because $\Delta_x s_1=\Delta_x s_2=0$, and $\Delta_x x=0$, the terms in the square bracket are zeros:
+$$\Delta_x x = a^{11} \phi_{11} + 2a^{12}\phi_{12} + a^{22}\phi_{22}  =0$$
+The contravariant components have the following relation $J^2 a^{11} = a_{22}$, $J^2 a^{12} = -a_{12}$, $J^2 a^{22} = a_{11}$, so:
+$$a_{22} x_{11} - 2a_{12}x_{12} + a_{11}x_{22} =0$$
+For each component of $x^k$, $k=1,2$.
+
+We can generalize to higher dimensions:
+$$\text{adjugate}(a)_{ij} x^k_{ij} =0$$
+
+3D example:
+$$\begin{bmatrix}
+a_{22}a_{33} - a_{23}^2 & a_{13}a_{23}-a_{12}a_{33} & a_{12}a_{23}-a_{13}a_{22} \\
+* & a_{11}a_{33} - a_{13}^2 & a_{12}a_{13} - a_{11}a_{23} \\ *&*&a_{11}a_{22} - a_{12}^2
+\end{bmatrix} \begin{bmatrix} x^k_{11} & x^k_{12} & x^k_{13} \\ * & x^k_{22} & x^k_{23} \\ * & * & x^{k}_{33} \end{bmatrix} = 0$$
+
+
+
+
 # Variational mesh generation with anisotropic metric conformity
 
 ---

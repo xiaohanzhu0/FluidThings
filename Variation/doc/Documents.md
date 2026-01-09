@@ -1,3 +1,217 @@
+For a given mesh $A$ (the mapping $x_A(s)$, how do we choose a metric field such that $A$ minimize the cost?
+Based on exact cost: 
+$$J^T_A M J_A =I$$
+So:
+$$M = J_A^{-T} J_A^{-1}$$
+
+But for alternative cost, the minimum $M$ is trivially $M=0$, 
+
+
+
+Candidate cost functional: convex on $(-\infty,\infty)$, increasing on $(0,\infty)$, should be very small at 1
+
+$(Mx_s^2)^p$. If $p=1$, then this is the alternative cost functional we used
+
+
+
+More choices of cost functional
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Given nodes of Mesh A, compute the metric tensor M. Then generate mesh B based on metric tensor M.
+
+$$J^T_A M J_A = I$$
+so
+$$M = J_A^{-T} J_A^{-1}$$
+
+Mesh A is from hyperbolic mesh generator.
+![[untitled2.png]]
+
+
+![[untitled.png]]
+
+
+
+
+### Orthogonality
+The original proposition of orthogonality-promoting kernel in the computational domain is:
+$$L_\text{ortho,1} = g_{12}^2$$
+Or, to keep it cell-size invariant:
+$$L_\text{ortho,2} = \frac{g_{12}^2}{g_{11}g_{22}}$$
+Where $g_{\alpha\beta}=\frac{\partial x_l}{\partial s_\alpha}\frac{\partial x_l}{\partial s_\beta}$ .
+
+To promote orthogonality in the physical domain, we consider the following kernel in terms of normal vectors:
+$$L_\text{ortho,3} = \frac{(g^{12})^2}{g^{11}g^{22}}$$
+Where $g^{\alpha\beta}=\frac{\partial s_\alpha}{\partial x_l}\frac{\partial s_\beta}{\partial x_l}$.
+This makes sense because the pair of tangent vector and normal vector with different index is orthogonal, hence the deviation from orthogonality $|90-\theta|$ of $(\frac{\partial x_l}{\partial s_\alpha},\frac{\partial x_l}{\partial s_\beta})$ is equal to that of $(\frac{\partial s_\alpha}{\partial x_l},\frac{\partial s_\beta}{\partial x_l})$
+
+
+![[Screen Shot 2025-11-12 at 2.41.42 PM.jpg]]
+
+Then the $L_\text{ortho}$ part of Euler-Lagrangian is:
+$$\nabla \cdot \left( \frac{2g^{12}}{g^{11}g^{22}} \nabla s_2 - \frac{2(g^{12})^2}{(g^{11})^2g^{22}} \nabla s_1 \right) = 0$$
+$$\nabla \cdot \left( \frac{2g^{12}}{g^{11}g^{22}} \nabla s_1 - \frac{2(g^{12})^2}{g^{11}(g^{22})^2} \nabla s_2 \right) = 0$$
+
+
+
+Combining with the metric-conforming part of the Euler Lagrangian:
+$$2\nabla \cdot \left[ |J|^{-1}(J^T MJ)^{-1} \nabla s_1\right] = 0$$
+$$2\nabla \cdot \left[ |J|^{-1}(J^T MJ)^{-1} \nabla s_2\right] = 0$$
+We get:
+$$\nabla \cdot \left[ \frac{2g^{12}}{g^{11}g^{22}} \nabla s_2 + \left(2|J|^{-1}(J^T MJ)^{-1} - \frac{2(g^{12})^2}{(g^{11})^2g^{22}}\right) \nabla s_1 \right] = 0$$
+$$\nabla \cdot \left[ \frac{2g^{12}}{g^{11}g^{22}} \nabla s_1 + \left(2|J|^{-1}(J^T MJ)^{-1}- \frac{2(g^{12})^2}{g^{11}(g^{22})^2}\right) \nabla s_2 \right] = 0$$
+
+
+
+
+
+### Metric Gradation
+
+#### Field spanning
+The size gradation related to any pair of points (p,q) in the domain is given as:
+$$c(\mathbf{p},\mathbf{q}) = \max \left(\frac{h_p}{h_q},\frac{h_q}{h_p} \right)^{1/l_\mathcal{M}(\mathbf{p,q})}$$
+Where $l_\mathcal{M}(\mathbf{p,q})$ is the Riemannian distance between $\mathbf{p}$ and $\mathbf{q}$ given the metric tensor field $\mathcal{M}$
+For now, we approximates the distance by integrating along a straight parametrized path connecting p and q. Let $\mathbf{e} = \mathbf{q-p}$
+$$l_{\mathcal{M}(\mathbf{p,q})} \approx \int_0^1 \sqrt{\mathbf{e}^T \mathcal{M}(\mathbf{p}+t\mathbf{e})\mathbf{e}}\; dt = \Vert \mathbf{e}\Vert_2 \int_0^1 \sqrt{\mathcal{M}(\mathbf{p}+t\mathbf{e})}\;dt = \Vert \mathbf{e}\Vert_2 \int_0^1 \frac{1}{h_\mathcal{M}(t)} \; dt$$
+Where we can use linear approximation $h_\mathcal{M}(t) \approx (1-t)h_\mathbf{p} + th_\mathbf{q}$. Then
+$$l_{\mathcal{M}(\mathbf{p,q})}  \approx \Vert \mathbf{e}\Vert_2 \int_0^1 \frac{1}{(1-t)h_\mathbf{p} + th_\mathbf{q}} \; dt = \frac{\Vert\mathbf{e}\Vert_2}{h_\mathbf{p}} \frac{\ln(h_\mathbf{q}/h_\mathbf{p})}{h_\mathbf{q}/h_\mathbf{p}-1}$$
+
+Given a gradation threshold $\beta$, we want to reduce $\mathbf{q}$ to $\tilde{\mathbf{q}}$ such that $c(\mathbf{p},\mathbf{\tilde{q}}) = \beta$
+Assuming $h_p\leq h_q$, then 
+$$c(\mathbf{p},\mathbf{q}) = \left(\frac{\tilde{h}_q}{h_p}\right)^{1/l_\mathcal{M}(\mathbf{p,q})}$$
+Let $r = \frac{\tilde{h}_q}{h_p}$:
+$$l_\mathcal{M}(\mathbf{p,q}) = \frac{\ln r}{\ln \beta}$$
+Substituting the linear approximation on $l_\mathcal{M}$ to get:
+$$\frac{\Vert\mathbf{e}\Vert_2}{h_\mathbf{p}} \frac{\ln(r)}{r-1} = \frac{\ln r}{\ln \beta}$$
+Solving for $r$ to get:
+$$r = 1 + \frac{\Vert\mathbf{e}\Vert_2}{h_\mathbf{p}}  \ln(\beta)$$
+Then we can grade $\tilde{h}_q$ as:
+$$\tilde{h}_q =\left(1 + \frac{\Vert\mathbf{e}\Vert_2}{h_\mathbf{p}}  \ln(\beta)\right)h_p$$
+Or, in terms of metrics:
+$$\tilde{\mathcal{M}}_q =\left(1 + \frac{\Vert\mathbf{e}\Vert_2}{h_\mathbf{p}}  \ln(\beta)\right)^{-2}\mathcal{M}_p = \eta^2 \mathcal{M}_p$$
+
+
+
+#### Metric reduction
+After propagating metric from p to q, we want to reduce the metric at q, by finding the intersection between $\tilde{\mathcal{M}}_q$ and $\mathcal{M}_q$
+
+Intersection of two metric tensor:
+Given two metric tensors, find a basis (not necessarily orthogonal) that diagonalizes the two metric tensor the same time. 
+
+Find generalized eigenvalues $\lambda$ and eigenvectors $v$ of a pair of matrix $(A,B)$ such that $Av = \lambda B v$. Or simply find the eigens of $Cv=\lambda v$ where $C=B^{-1}A$ 
+
+We can verify that $A$ and $B$ can be diagonalized as $A=V^{-T} \Lambda_A V^{-1}$ and  $B=V^{-T} \Lambda_B V^{-1}$
+
+From checking the fact that $C=B^{-1}A=(V^{-T} \Lambda_B V^{-1})^{-1} (V^{-T} \Lambda_A V^{-1}) = V (\Lambda_B^{-1}\Lambda_A) V^{-1}$  
+
+Then we can find the intersection of the two metric tensor by computing $\Lambda_\text{inter}^{ii} = \max(\Lambda_A^{ii},\Lambda_B^{ii})$
+and thus the intersection is given by $M_{inter} = V^{-T} \Lambda_\text{inter} V^{-1}$
+
+Which conserves symmetric and positive definiteness.
+
+Then we can grade the metric at q, by the following update:
+```
+M_q = inter(M_q_tilde,M_q);
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+I made some reconsideration about the primary objective, which is let $l_i M_{ij} l_j = 1$ for every element. In a continuous sense, we want $\mathcal{L}(s) = x_{i,\alpha} M_{ij} x_{j,\alpha}$ to be constant over the domain (the principle of equal distribution). In this case, it makes more sense to let our variational problem as minimizing:
+$$\int_\hat{\Omega} \mathcal{L}^p(s) ds$$
+Or equivalently:
+$$\Vert \mathcal{L} \Vert_{L^p(\hat{\Omega})}$$
+Then the functional with greater $p$ tends to make $\mathcal{L}$ more equally distributed, and achieve most equal distribution as $p\to\infty$. In this case, since $\Vert \mathcal{L} \Vert_{L^p(\hat{\Omega})} = \max_s \mathcal{L}(s)$. This problem becomes $\min_{x(s)} \max_{s} \mathcal{L}(s)$, which doesn't involve integration and is kind of like a saddle point optimization problem (I am not very familiar about this). 
+
+Here shows the result from the first example in the original paper with 50 points in each direction. Our solver cannot solve the discontinuous L-inf norm, so I computed the result of $\int_\hat{\Omega} \mathcal{L}^p(s) ds$ on a sequence of $p$.
+
+The range of local misfit decreases as we increase p. Surprisingly, mean value of local misfit also decreases as p increases, which contradicts to the physical meaning of $p=1$ case.
+
+```
+L-1 optimization result:
+misfit mean: 2.4406
+misfit range: 29.496
+L-2 optimization result:
+misfit mean: 1.237
+misfit range: 2.609
+L-4 optimization result:
+misfit mean: 1.157
+misfit range: 0.93711
+L-8 optimization result:
+misfit mean: 1.1435
+misfit range: 0.42444
+L-16 optimization result:
+misfit mean: 1.1406
+misfit range: 0.20394
+```
+
+So one of my question is that why this happen? Should we use the misfit kernel of the exact problem $(x_{i,\alpha} M_{ij} x_{j,\alpha}-1)^2$ to evaluate the misfit of the result?
+
+Here are some plots might be relevant:
+
+Below shows different solutions from different value of p and the exact solution of the case $p=1$ (minimize mean misfit) and $p=\infty$ (equally distribute misfit).
+![[demo.png]]
+
+Below shows the contour plot of misfit of case p=1 and p=16. The contour lines are incremented equally among the two plots, so we can see the range of local misfit over the domain.
+
+![[L1.png]]
+
+![[L16.png]]
+
+
+Another thing to talk about shortly:
+Last time we talked about getting more cases to validate the correctness and robustness of our solver. I am considering starting with anisotropic steady state diffusion problems. Those problem has some similarities to the airfoil metric field, and Prof Nochetto might like them more.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Two-stages Mapping
 $X:$ Physical domain (arbitrarily shaped)

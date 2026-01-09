@@ -1,7 +1,7 @@
 close all
 addpath('./','./utils')
 
-cf.problem = 8;
+cf.problem = 1;
 
 cf.Nx1 = 41;
 cf.Nx2 = 41;
@@ -13,7 +13,7 @@ cf.sigma2 = 1;
 
 cf.nonlinear = 7;
 cf.fixed_bc = 0;
-cf.omega = 1;
+cf.omega = 0.5;
 cf.offdiag = 1;
 cf.max_iter = 500;
 cf.tolerance = 1e-6;

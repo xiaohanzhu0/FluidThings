@@ -10,7 +10,8 @@ function [Theta, Theta_1, Theta_2, Theta_inf] = skewness(x1, x2)
     Theta_2 = norm(Theta(:), 2) / sqrt(Nx1*Nx2);
     Theta_inf = norm(Theta(:), Inf);
 
-    pcolor(x1,x2,Theta); colorbar
+    h = pcolor(x1,x2,Theta); colorbar
+    set(h, 'EdgeColor', 'none');
     title("Deviation from Orthogonality")
     xlabel(sprintf('$\\left\\|\\Theta\\right\\|_1=%.3g,\\; \\left\\|\\Theta\\right\\|_2=%.3g,\\; \\left\\|\\Theta\\right\\|_{\\infty}=%.3g$', ...
                Theta_1, Theta_2, Theta_inf), ...
