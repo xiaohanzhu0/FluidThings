@@ -3,10 +3,9 @@ clear
 addpath('/Users/zhuxiaohan/Documents/repo/Fluid/Variation/utils')
 addpath('/Users/zhuxiaohan/Documents/repo/Fluid/Variation/test/Harmonic')
 problem = 5;
-orthongonal_project = 1;
 
-Nx1 = 201;
-Nx2 = 201;
+Nx1 = 51;
+Nx2 = 51;
 
 [x1,x2,M11_fun,M12_fun,M22_fun] = problems.Initialization(problem,Nx1,Nx2);
 
