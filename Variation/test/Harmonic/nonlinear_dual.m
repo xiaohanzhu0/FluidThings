@@ -2,7 +2,7 @@ function [x1_samp, x2_samp]= nonlinear_dual()
 clear
 addpath('/Users/zhuxiaohan/Documents/repo/Fluid/Variation/utils')
 addpath('/Users/zhuxiaohan/Documents/repo/Fluid/Variation/test/Harmonic')
-problem = 1;
+problem = 5;
 orthongonal_project = 1;
 
 Nx1 = 201;
