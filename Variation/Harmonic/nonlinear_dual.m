@@ -1,47 +1,54 @@
 function [x1_samp, x2_samp]= nonlinear_dual()
-clear
-addpath('/Users/zhuxiaohan/Documents/repo/Fluid/Variation/utils')
-addpath('/Users/zhuxiaohan/Documents/repo/Fluid/Variation/test/Harmonic')
-problem = 5;
+params.problemId = 5;
+params.Nx1 = 51;
+params.Nx2 = 51;
+params.Nt1 = 50;
+params.Nt2 = 50;
+params.sampleNs = 200;
+params.omega1 = 0.5;
+params.omega2 = 0.01;
+params.max_iter = 10;
+params.pauseTime = 0.1;
+params.diagonal_reg = 0;
+params.interpMethod = 'cubic';
+params.doPlot = 1;
+params.plotEvery = 1;
 
-Nx1 = 51;
-Nx2 = 51;
+% requires +problems/Initialization.m
+[x1,x2,M11_fun,M12_fun,M22_fun] = problems.Initialization(params.problemId,params.Nx1,params.Nx2);
 
-[x1,x2,M11_fun,M12_fun,M22_fun] = problems.Initialization(problem,Nx1,Nx2);
-
-
+% requires utils/extract_boundary_points.m
 boundary_points = extract_boundary_points(x1,x2);
 
 figure
 plot(x1, x2, 'k'); hold on; plot(x1', x2', 'k');
 
-[x1, x2, info] = solve_harmonic(x1, x2, Omega=0.5, ShowPlot=true, ...
-                                BoundaryPoints=boundary_points, PauseTime=0.1);
+% requires solve_harmonic.m
+[x1, x2, info] = solve_harmonic(x1, x2, Omega=params.omega1, ShowPlot=true, ...
+                                BoundaryPoints=boundary_points, PauseTime=params.pauseTime);
 
 %%
-
-[Nx2, Nx1] = size(x1);
-% Interpolant of X(T)
-[T1,T2] = ndgrid(linspace(0,1,Nx1),linspace(0,1,Nx2));
-x1_in_t = griddedInterpolant(T1, T2, x1', 'cubic');
-x2_in_t = griddedInterpolant(T1, T2, x2', 'cubic');
-
+[params.Nx2, params.Nx1] = size(x1);
+% Build interpolants for x(t) to evaluate x at non-grid (t1,t2)
+[T1,T2] = ndgrid(linspace(0,1,params.Nx1),linspace(0,1,params.Nx2));
+x1_in_t = griddedInterpolant(T1, T2, x1', params.interpMethod);
+x2_in_t = griddedInterpolant(T1, T2, x2', params.interpMethod);
 
 % Interpolant of J = dX(t)/dT
-[dx1dt1_samp, dx2dt2_samp] = DCentral(x1, x2, 1/(Nx1-1), 1/(Nx2-1));
-[dx2dt1_samp, dx1dt2_samp] = DCentral(x2, x1, 1/(Nx1-1), 1/(Nx2-1));
+% requires utils/DCentral.m
+[dx1dt1_samp, dx2dt2_samp] = DCentral(x1, x2, 1/(params.Nx1-1), 1/(params.Nx2-1));
+[dx2dt1_samp, dx1dt2_samp] = DCentral(x2, x1, 1/(params.Nx1-1), 1/(params.Nx2-1));
 
 
 %%
-
-[T1,T2] = meshgrid(linspace(0,1,Nx1),linspace(0,1,Nx2));
+[T1,T2] = meshgrid(linspace(0,1,params.Nx1),linspace(0,1,params.Nx2));
 t1 = linspace(0,1,50);
 t2 = linspace(0,1,50);
 [t1, t2] = meshgrid(t1, t2);
-dx1dt1 = interp2(T1,T2,dx1dt1_samp,t1,t2, 'cubic');
-dx1dt2 = interp2(T1,T2,dx1dt2_samp,t1,t2, 'cubic');
-dx2dt1 = interp2(T1,T2,dx2dt1_samp,t1,t2, 'cubic');
-dx2dt2 = interp2(T1,T2,dx2dt2_samp,t1,t2, 'cubic');
+dx1dt1 = interp2(T1,T2,dx1dt1_samp,t1,t2, params.interpMethod);
+dx1dt2 = interp2(T1,T2,dx1dt2_samp,t1,t2, params.interpMethod);
+dx2dt1 = interp2(T1,T2,dx2dt1_samp,t1,t2, params.interpMethod);
+dx2dt2 = interp2(T1,T2,dx2dt2_samp,t1,t2, params.interpMethod);
 
 x1_temp = x1_in_t(t1,t2);
 x2_temp = x2_in_t(t1,t2);
@@ -49,97 +56,90 @@ M11 = M11_fun(x1_temp, x2_temp);
 M12 = M12_fun(x1_temp, x2_temp);
 M22 = M22_fun(x1_temp, x2_temp);
 
+% Compute pushforward metric Mp = J^T M J on the t-grid.
 Mp11 = (dx1dt1.*M11+dx2dt1.*M12).*dx1dt1 + (dx1dt1.*M12+dx2dt1.*M22).*dx2dt1;
 Mp22 = (dx1dt2.*M11+dx2dt2.*M12).*dx1dt2 + (dx1dt2.*M12+dx2dt2.*M22).*dx2dt2;
 Mp12 = (dx1dt1.*M11+dx2dt1.*M12).*dx1dt2 + (dx1dt1.*M12+dx2dt1.*M22).*dx2dt2;
-clear x1_temp x2_temp M11 M12 M22
 
-Mp11_fun = griddedInterpolant(t1', t2', Mp11', 'cubic');
-Mp12_fun = griddedInterpolant(t1', t2', Mp12', 'cubic');
-Mp22_fun = griddedInterpolant(t1', t2', Mp22', 'cubic');
+Mp11_fun = griddedInterpolant(t1', t2', Mp11', params.interpMethod);
+Mp12_fun = griddedInterpolant(t1', t2', Mp12', params.interpMethod);
+Mp22_fun = griddedInterpolant(t1', t2', Mp22', params.interpMethod);
 %% Solve inverse instead
 detJ = Mp11.*Mp22 - Mp12.^2;
 Mp_inv11 = Mp22 ./ detJ;
 Mp_inv22 = Mp11 ./ detJ;
 Mp_inv12 = -Mp12 ./ detJ;
 
-%Mp_inv11 = Mp_inv11 + 0.01*max(Mp_inv11,[],'all');
-%Mp_inv22 = Mp_inv22 + 0.01*max(Mp_inv22,[],'all');
+if params.diagonal_reg == 1
+    Mp_inv11 = Mp_inv11 + 0.01*max(Mp_inv11,[],'all');
+    Mp_inv22 = Mp_inv22 + 0.01*max(Mp_inv22,[],'all');
+end
 
-%Mp11_inv = griddedInterpolant(t1, t2, Mp_inv.M11', 'cubic');
-%Mp22_inv = griddedInterpolant(t1, t2, Mp_inv.M22', 'cubic');
-%Mp12_inv = griddedInterpolant(t1, t2, Mp_inv.M12', 'cubic');
 %%
-
-Nt1 = 50; Nt2 = 50;
-N = Nt1*Nt2;
-s1 = linspace(0,1,Nt1);
-s2 = linspace(0,1,Nt2);
+s1 = linspace(0,1,params.Nt1);
+s2 = linspace(0,1,params.Nt2);
 [s1, s2] = meshgrid(s1, s2);
-t1 = linspace(0,1,Nt1);
-t2 = linspace(0,1,Nt2);
-[t1, t2] = meshgrid(t1, t2);
+t1_grid = linspace(0,1,params.Nt1);
+t2_grid = linspace(0,1,params.Nt2);
+[t1_grid, t2_grid] = meshgrid(t1_grid, t2_grid);
 
-%%
-max_iter = 100;
-Lt_list1 = zeros(1,max_iter);
-Lx_list1 = zeros(1,max_iter);
-Theta_1_list1 = zeros(1,max_iter);
-Theta_2_list1 = zeros(1,max_iter);
-Theta_inf_list1 = zeros(1,max_iter);
+%% Solve for inverse map s(t) using conservative FV discretization.
+hist = struct('Lt',zeros(1,params.max_iter), ...
+              'Lx',zeros(1,params.max_iter), ...
+              'Theta1',zeros(1,params.max_iter), ...
+              'Theta2',zeros(1,params.max_iter), ...
+              'ThetaInf',zeros(1,params.max_iter));
 
-for i = 1:max_iter
-opt.ortho = false;
-opt.ortho_.lambda = 0.001;
+warning('off', 'MATLAB:griddedInterpolant:MeshgridEval2DWarnId');
+for i = 1:params.max_iter
 
-[ds1dt1, ds2dt2] = DCentral(s1, s2, 1/(Nt1-1), 1/(Nt2-1));
-[ds2dt1, ds1dt2] = DCentral(s2, s1, 1/(Nt1-1), 1/(Nt2-1));
+[ds1dt1, ds2dt2] = DCentral(s1, s2, 1/(params.Nt1-1), 1/(params.Nt2-1));
+[ds2dt1, ds1dt2] = DCentral(s2, s1, 1/(params.Nt1-1), 1/(params.Nt2-1));
 J = abs(ds1dt1.*ds2dt2 - ds2dt1.*ds1dt2);
 
-Mp_inv11_fun = griddedInterpolant(t1', t2', Mp_inv11'.*J', 'cubic');
-Mp_inv22_fun = griddedInterpolant(t1', t2', Mp_inv22'.*J', 'cubic');
-Mp_inv12_fun = griddedInterpolant(t1', t2', Mp_inv12'.*J', 'cubic');
+Mp_inv11_fun = griddedInterpolant(t1_grid', t2_grid', Mp_inv11'.*J', params.interpMethod);
+Mp_inv22_fun = griddedInterpolant(t1_grid', t2_grid', Mp_inv22'.*J', params.interpMethod);
+Mp_inv12_fun = griddedInterpolant(t1_grid', t2_grid', Mp_inv12'.*J', params.interpMethod);
 
-%
-[s1_new, s2_new] = AssembleLinearSystemDual(t1, t2, Mp_inv11_fun, Mp_inv12_fun, Mp_inv22_fun);
+% requires AssembleLinearSystemDual.m
+[s1_new, s2_new] = AssembleLinearSystemDual(t1_grid, t2_grid, Mp_inv11_fun, Mp_inv12_fun, Mp_inv22_fun);
 
-s1 = s1 + 0.01*(s1_new-s1);
-s2 = s2 + 0.01*(s2_new-s2);
+s1 = s1 + params.omega2*(s1_new-s1);
+s2 = s2 + params.omega2*(s2_new-s2);
 
-s1_samp = linspace(0,1,200);
-s2_samp = linspace(0,1,200);
+s1_samp = linspace(0,1,params.sampleNs);
+s2_samp = linspace(0,1,params.sampleNs);
 [s1_samp,s2_samp] = meshgrid(s1_samp,s2_samp);
-t1_samp = griddata(s1,s2,t1,s1_samp,s2_samp);
-t2_samp = griddata(s1,s2,t2,s1_samp,s2_samp);
+t1_samp = griddata(s1,s2,t1_grid,s1_samp,s2_samp);
+t2_samp = griddata(s1,s2,t2_grid,s1_samp,s2_samp);
 x1_samp = x1_in_t(t1_samp,t2_samp);
 x2_samp = x2_in_t(t1_samp,t2_samp);
 
-figure(8)
-plot(s1, s2, 'k'); hold on; plot(s1', s2', 'k'); hold off
-figure(9)
-plot(t1_samp, t2_samp, 'k'); hold on; plot(t1_samp', t2_samp', 'k'); hold off
-figure(10)
-plot(x1_samp, x2_samp, 'k'); hold on; plot(x1_samp', x2_samp', 'k'); hold off
-axis equal
-pause(0.1)
+if params.doPlot && mod(i, params.plotEvery)==0
+    plotIterationMeshes(s1,s2,t1_samp,t2_samp,x1_samp,x2_samp);
+    pause(params.pauseTime);
+end
 
 M11_samp = Mp11_fun(t1_samp, t2_samp);
-M12_samp = Mp11_fun(t1_samp, t2_samp);
-M22_samp = Mp11_fun(t1_samp, t2_samp);
+M12_samp = Mp12_fun(t1_samp, t2_samp);
+M22_samp = Mp22_fun(t1_samp, t2_samp);
+% requires utils/Cost.m
 [Lt1, Lt2] = Cost(t1_samp, t2_samp, M11_samp, M12_samp, M22_samp);
-Lt_list1(i) = mean(Lt1+Lt2,'all');
+hist.Lt(i) = mean(Lt1+Lt2,'all');
 
 M11_samp = M11_fun(x1_samp, x2_samp);
 M12_samp = M12_fun(x1_samp, x2_samp);
 M22_samp = M22_fun(x1_samp, x2_samp);
 [Lx1, Lx2] = Cost(x1_samp, x2_samp, M11_samp, M12_samp, M22_samp);
-Lx_list1(i) = mean(Lx1+Lx2,'all');
+hist.Lx(i) = mean(Lx1+Lx2,'all');
 
+% requires +analysis/skewness.m
 [Theta, Theta_1, Theta_2, Theta_inf] = analysis.skewness(x1_samp, x2_samp);
-Theta_1_list1(i) = Theta_1;
-Theta_2_list1(i) = Theta_2;
-Theta_inf_list1(i) = Theta_inf;
+hist.Theta1(i) = Theta_1;
+hist.Theta2(i) = Theta_2;
+hist.ThetaInf(i) = Theta_inf;
 end
+warning('on', 'MATLAB:griddedInterpolant:MeshgridEval2DWarnId');
 end
 
 %{
@@ -262,7 +262,15 @@ sigma1 = round(sigma1*downscale);
 sigma2 = round(sigma2*downscale);
 
 %}
-
+function plotIterationMeshes(s1,s2,t1_samp,t2_samp,x1_samp,x2_samp)
+    figure(8)
+    plot(s1, s2, 'k'); hold on; plot(s1', s2', 'k'); hold off
+    figure(9)
+    plot(t1_samp, t2_samp, 'k'); hold on; plot(t1_samp', t2_samp', 'k'); hold off
+    figure(10)
+    plot(x1_samp, x2_samp, 'k'); hold on; plot(x1_samp', x2_samp', 'k'); hold off
+    axis equal
+end
 
 function [x1_new, x2_new] = post_orthogonalize(x1, x2)
     x1_new = x1;
