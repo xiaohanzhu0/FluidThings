@@ -18,6 +18,7 @@ cf.offdiag = 1;
 cf.max_iter = 500;
 cf.tolerance = 1e-6;
 cf.smooth = 0;
+cf.new_airfoil = 0;
 
 if cf.problem == 5
     cf.grade = 0;

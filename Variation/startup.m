@@ -1,2 +1,4 @@
-addpath('/Users/zhuxiaohan/Documents/repo/Fluid/Variation/utils')
-addpath('/Users/zhuxiaohan/Documents/repo/Fluid/Variation/test/Harmonic')
+root = fileparts(mfilename('fullpath'));
+addpath(root);
+addpath(fullfile(root, 'utils'));
+addpath(fullfile(root, 'Harmonic'));
