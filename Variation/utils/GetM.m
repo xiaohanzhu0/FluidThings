@@ -7,6 +7,8 @@ function Mfun = GetM(problem)
         Mfun = @(x1, x2) problems.Prob3Metric(x1,x2);
     elseif problem == 4
         Mfun = @(x1, x2) problems.Prob4Metric(x1,x2);
+    elseif problem == 5
+        Mfun = @(x1, x2) problems.Prob5Metric(x1,x2);
     elseif problem == 6
         Mfun = @(x1, x2) problems.Prob6Metric(x1,x2);
     elseif problem == 8

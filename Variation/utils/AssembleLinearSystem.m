@@ -52,58 +52,23 @@ function [A, b, res] = AssembleLinearSystem(x1, x2, Mfun, param)
     A(N+1:end,1:N) = A(N+1:end,1:N) - 2*L.*M12(:);
     end
 
-    if param.repulse == 1
-        detJ = dx1ds1.*dx2ds2 - dx1ds2.*dx2ds1;
-        JinvT11 = dx2ds2 ./ detJ;  JinvT12 = -dx1ds2 ./ detJ;
-        JinvT21 = -dx2ds1 ./ detJ; JinvT22 =  dx1ds1 ./ detJ;
-        coef = 1;
 
-        D1 = spdiags([-e/2, e/2], [-Nx2, Nx2], N, N);
-        D2 = spdiags([-e/2, e/2], [-1, 1], N, N);
-        D11 = D1*( spdiags(coef*JinvT11(:),0,N,N) ) + D2*( spdiags(coef*JinvT12(:),0,N,N) );
-        D12 = D1*( spdiags(coef*JinvT21(:),0,N,N) ) + D2*( spdiags(coef*JinvT22(:),0,N,N) );
-        D21 = D1*( spdiags(coef*JinvT11(:),0,N,N) ) + D2*( spdiags(coef*JinvT12(:),0,N,N) );
-        D22 = D1*( spdiags(coef*JinvT21(:),0,N,N) ) + D2*( spdiags(coef*JinvT22(:),0,N,N) );  % check your indexing
-        A(1:N,   1:N)     = A(1:N,1:N)    + D11;
-        A(1:N,   N+1:end) = A(1:N,N+1:end) + D12;
-        A(N+1:end,1:N)    = A(N+1:end,1:N) + D21;
-        A(N+1:end,N+1:end)= A(N+1:end,N+1:end) + D22;
-    elseif param.repulse == 2
-        coef = 1e-1;
-        reg =  0;
-        Q1 = M11 .* (dx1ds1.^2) ...
-           + 2*M12 .* (dx1ds1 .* dx2ds1) ...
-           + M22 .* (dx2ds1.^2);
-        
-        Q2 = M11 .* (dx1ds2.^2) ...
-           + 2*M12 .* (dx1ds2 .* dx2ds2) ...
-           + M22 .* (dx2ds2.^2);
-        %if use_inverse
-          w1 = 1./(sigma1*1^2*Q1.^2 + reg);
-          w2 = 1./(sigma2*2^2*Q2.^2 + reg);
-        %else             % negative-log
-        %  w1 = 1./Q1;
-        %  w2 = 1./Q2;
-        %end
+    detJ = dx1ds1.*dx2ds2 - dx1ds2.*dx2ds1;
+    JinvT11 = dx2ds2 ./ detJ;  JinvT12 = -dx1ds2 ./ detJ;
+    JinvT21 = -dx2ds1 ./ detJ; JinvT22 =  dx1ds1 ./ detJ;
+    coef = 1;
 
-        W1 = spdiags(w1(:),0,N,N);
-        W2 = spdiags(w2(:),0,N,N);
-        M11d = spdiags(M11(:) + reg,0,N,N);
-        M12d = spdiags(M12(:) + reg,0,N,N);
-        M22d = spdiags(M22(:) + reg,0,N,N);
-        
-        D1 = spdiags([-e/2, e/2], [-Nx2, Nx2], N, N);
-        D2 = spdiags([-e/2, e/2], [-1, 1], N, N);
-        D11 = 2*( D1*(W1*M11d) + D2*(W2*M11d) );   % ∂R₁/∂x₁
-        D12 = 2*( D1*(W1*M12d) + D2*(W2*M12d) );   % ∂R₁/∂x₂
-        D21 = 2*( D1*(W1*M12d) + D2*(W2*M12d) );   % ∂R₂/∂x₁  (M₂₁=M₁₂)
-        D22 = 2*( D1*(W1*M22d) + D2*(W2*M22d) );   % ∂R₂/∂x₂
+    D1 = spdiags([-e/2, e/2], [-Nx2, Nx2], N, N);
+    D2 = spdiags([-e/2, e/2], [-1, 1], N, N);
+    D11 = D1*( spdiags(coef*JinvT11(:),0,N,N) ) + D2*( spdiags(coef*JinvT12(:),0,N,N) );
+    D12 = D1*( spdiags(coef*JinvT21(:),0,N,N) ) + D2*( spdiags(coef*JinvT22(:),0,N,N) );
+    D21 = D1*( spdiags(coef*JinvT11(:),0,N,N) ) + D2*( spdiags(coef*JinvT12(:),0,N,N) );
+    D22 = D1*( spdiags(coef*JinvT21(:),0,N,N) ) + D2*( spdiags(coef*JinvT22(:),0,N,N) );  % check your indexing
+    A(1:N,   1:N)     = A(1:N,1:N)    + D11;
+    A(1:N,   N+1:end) = A(1:N,N+1:end) + D12;
+    A(N+1:end,1:N)    = A(N+1:end,1:N) + D21;
+    A(N+1:end,N+1:end)= A(N+1:end,N+1:end) + D22;
 
-        A(1:N,   1:N)     = A(1:N,1:N)    - coef*D11;
-        A(1:N,   N+1:end) = A(1:N,N+1:end) - coef*D12;
-        A(N+1:end,1:N)    = A(N+1:end,1:N) - coef*D21;
-        A(N+1:end,N+1:end)= A(N+1:end,N+1:end) - coef*D22;
-    end
 
     if param.nonlinear == 4        
         D = sparse(N_all, N_all);

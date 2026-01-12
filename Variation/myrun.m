@@ -1,7 +1,7 @@
 close all
 addpath('./','./utils')
 
-cf.problem = 1;
+cf.problem = 5;
 
 cf.Nx1 = 41;
 cf.Nx2 = 41;
@@ -19,8 +19,12 @@ cf.max_iter = 500;
 cf.tolerance = 1e-6;
 cf.smooth = 0;
 
-cf.append_trail = 0;
-cf.new_airfoil = 0;
+if cf.problem == 5
+    cf.grade = 0;
+    cf.metric_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/metricField.fields';
+    cf.airfoil_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/airfoil_18M_coarseIJK.grid';
+    cf.append_trail = 0;
+end
 
 cf.animation = 1;
 cf.iter_per_frame = 1;
@@ -37,7 +41,6 @@ end
 
 if cf.nonlinear == 7
     cf.exact = 0;
-    cf.repulse = 0;
 end
 
 if cf.new_airfoil == 1

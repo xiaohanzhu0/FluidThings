@@ -51,31 +51,6 @@ if param.exact == 1
     M22_f2 = M22_f2.*(m2(1:end-1,:)/2 + m2(2:end,:)/2 + q2);
 end
 
-%{
-if param.repulse == 1
-    %p1 = M.M11.*dx1ds1.^2 + 2*M.M12.*dx1ds1.*dx2ds1 + M.M22.*dx2ds1.^2;
-    %p2 = M.M11.*dx1ds2.^2 + 2*M.M12.*dx1ds2.*dx2ds2 + M.M22.*dx2ds2.^2;
-    p1 = dx1ds1.^2 + dx2ds1.^2;
-    p2 = dx1ds2.^2 + dx2ds2.^2;
-    %p1_f1 = (p1(:,1:end-1) + p1(:,2:end)) / 2;
-    %p1_f2 = (p1(1:end-1,:) + p1(2:end,:)) / 2;
-    %p2_f1 = (p2(:,1:end-1) + p2(:,2:end)) / 2;
-    %p2_f1 = (p2(1:end-1,:) + p2(2:end,:)) / 2;
-
-    p1_f1 = 2 ./ (p1(:,1:end-1).^2 + p1(:,2:end).^2);
-    p1_f2 = 2 ./ (p1(1:end-1,:).^2 + p1(2:end,:).^2);
-    p2_f1 = 2 ./ (p2(:,1:end-1).^2 + p2(:,2:end).^2);
-    p2_f2 = 2 ./ (p2(1:end-1,:).^2 + p2(2:end,:).^2);
-
-    lambda = 1e-1;
-    M11_f1(2:end-1,2:end-1) = M11_f1(2:end-1,2:end-1) - lambda*p1_f1;
-    M11_f2(2:end-1,2:end-1) = M11_f2(2:end-1,2:end-1) - lambda*p2_f2;
-    %M12_f1(2:end-1,2:end-1) = M12_f1(2:end-1,2:end-1) - lambda*p1_f1;
-    %M12_f2(2:end-1,2:end-1) = M12_f2(2:end-1,2:end-1) - lambda*p2_f2;
-    M22_f1(2:end-1,2:end-1) = M22_f1(2:end-1,2:end-1) - lambda*p1_f1;
-    M22_f2(2:end-1,2:end-1) = M22_f2(2:end-1,2:end-1) - lambda*p2_f2;
-end
-%}
 
 e = ones(N,1);
 
@@ -238,24 +213,24 @@ b2 = b2 + dM22dx2.*((m1+q1).*dx2ds1.^2*sigma1^2 + (m2+q2).*dx2ds2.^2*sigma2^2);
 b2 = b2 + 2*dM12dx2.*((m1+q1).*dx1ds1.*dx2ds1*sigma1^2 + (m2+q2).*dx1ds2.*dx2ds2*sigma2^2);
 b2 = b2 + dM11dx2.*((m1+q1).*dx1ds1.^2*sigma1^2 + (m2+q2).*dx1ds2.^2*sigma2^2);
 
-if param.repulse == 1
-    lambda = 1;
-    p1 = M.M11.*dx1ds1.^2 + 2*M.M12.*dx1ds1.*dx2ds1 + M.M22.*dx2ds1.^2;
-    p2 = M.M11.*dx1ds2.^2 + 2*M.M12.*dx1ds2.*dx2ds2 + M.M22.*dx2ds2.^2;
-    %p1 = dx1ds1.^2 + dx2ds1.^2;
-    %p2 = dx1ds2.^2 + dx2ds2.^2;
 
-    aux1 = sigma1*p1.^(-2).*(M.M11.*dx1ds1 + M.M12.*dx2ds1) + sigma2*p2.^(-2).*(M.M11.*dx1ds2 + M.M12.*dx2ds2);
-    aux2 = sigma1*p1.^(-2).*(M.M12.*dx1ds1 + M.M22.*dx2ds1) + sigma2*p2.^(-2).*(M.M12.*dx1ds2 + M.M22.*dx2ds2);
-    %aux1 = sigma1*p1.^(-2).*(dx1ds1) + sigma2*p2.^(-2).*(dx1ds2);
-    %aux2 = sigma1*p1.^(-2).*(dx2ds1) + sigma2*p2.^(-2).*(dx2ds2);
+lambda = 1;
+p1 = M.M11.*dx1ds1.^2 + 2*M.M12.*dx1ds1.*dx2ds1 + M.M22.*dx2ds1.^2;
+p2 = M.M11.*dx1ds2.^2 + 2*M.M12.*dx1ds2.*dx2ds2 + M.M22.*dx2ds2.^2;
+%p1 = dx1ds1.^2 + dx2ds1.^2;
+%p2 = dx1ds2.^2 + dx2ds2.^2;
 
-    [daux1ds1, daux1ds2] = DCentral(aux1, aux1, ds1, ds2);
-    [daux2ds1, daux2ds2] = DCentral(aux2, aux2, ds1, ds2);
+aux1 = sigma1*p1.^(-2).*(M.M11.*dx1ds1 + M.M12.*dx2ds1) + sigma2*p2.^(-2).*(M.M11.*dx1ds2 + M.M12.*dx2ds2);
+aux2 = sigma1*p1.^(-2).*(M.M12.*dx1ds1 + M.M22.*dx2ds1) + sigma2*p2.^(-2).*(M.M12.*dx1ds2 + M.M22.*dx2ds2);
+%aux1 = sigma1*p1.^(-2).*(dx1ds1) + sigma2*p2.^(-2).*(dx1ds2);
+%aux2 = sigma1*p1.^(-2).*(dx2ds1) + sigma2*p2.^(-2).*(dx2ds2);
 
-    b1 = b1 + lambda*(daux1ds1 + daux1ds2);
-    b2 = b2 + lambda*(daux2ds1 + daux2ds2);
-end
+[daux1ds1, daux1ds2] = DCentral(aux1, aux1, ds1, ds2);
+[daux2ds1, daux2ds2] = DCentral(aux2, aux2, ds1, ds2);
+
+b1 = b1 + lambda*(daux1ds1 + daux1ds2);
+b2 = b2 + lambda*(daux2ds1 + daux2ds2);
+
 
 if param.fixed_bc == 0
     b1(:,1) = x1(:,1).*n_left(1,:)' + x2(:,1).*n_left(2,:)';

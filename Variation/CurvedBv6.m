@@ -9,7 +9,7 @@ if ismember(cf.problem, [1,2])
     [x1_exact, x2_exact]  = meshgrid(s1, s2);
 elseif cf.problem == 3
     M_type = cf.problem;
-    [x1, x2] = problems.InitProb3(cf.Nx1, cf.Nx2, 0.1);
+    [x1, x2] = problems.InitProb3(cf.Nx1, cf.Nx2);
     boundary_points.b = [x1(1,:); x2(1,:)];
     boundary_points.t = [x1(end,:); x2(end,:)];
     boundary_points.l = [x1(:,1), x2(:,1)];
@@ -62,12 +62,7 @@ elseif cf.problem == 8
     N = cf.Nx1 * cf.Nx2;
 end
 
-% Plot initial grid
-%plot(x1, x2, 'k'); hold on; plot(x1', x2', 'k');
-%title(cf.title_name); 
-%xlim([min(x1,[],'all'),max(x1,[],'all')]);
-%ylim([min(x2,[],'all'),max(x2,[],'all')]);
-%axis equal; hold off
+
 if cf.make_gif
     plot(x1, x2, 'k'); hold on; plot(x1', x2', 'k');
     title(cf.title_name); 
@@ -87,18 +82,14 @@ res = norm(A*[x1(:);x2(:)] - b);
 
 err = [x1(:);x2(:)];
 res_list = [res_list, norm(res)];
-%[L1, L2] = Cost(x1, x2, Mfun);
-%[L_exact,~,~,~] = CostExact(x1, x2, Mfun);
-%L1 = norm(L1(:));
-%L2 = norm(L2(:));
-%cost_list = [[L_exact; L1; L2]];
+
 
 disp('Started iterations');
 for iter = 1:cf.max_iter
 
     if cf.nonlinear == 4
         cf.forDx = 1;
-        [A, b] = AssembleLinearSystem(x1, x2, M, cf);
+        [A, b] = AssembleLinearSystem(x1, x2, Mfun, cf);
         res = A*err - b;
         err = A \ b;
         res = abs(res(1:N)) + abs(res(N+1:end));
@@ -108,7 +99,7 @@ for iter = 1:cf.max_iter
         dx1 = reshape(err(1:N), cf.Nx2, cf.Nx1);
         dx2 = reshape(err(N+1:end), cf.Nx2, cf.Nx1);
     elseif cf.nonlinear == 5
-        [A, b] = AssembleLinearSystemApprox(x1, x2, M, cf);
+        [A, b] = AssembleLinearSystemApprox(x1, x2, Mfun, cf);
         res = A*err - b;
         err = A \ b;
         res = abs(res(1:N)) + abs(res(N+1:end));
@@ -118,8 +109,7 @@ for iter = 1:cf.max_iter
         dx1 = reshape(err(1:N), cf.Nx2, cf.Nx1) - x1;
         dx2 = reshape(err(N+1:end), cf.Nx2, cf.Nx1) - x2;
     elseif cf.nonlinear == 6
-        [dx, res] = AssembleLinearSystemGMRE(x1, x2, M, cf);
-        %[dx, res] = JFNK(x1, x2, cf);
+        [dx, res] = AssembleLinearSystemGMRE(x1, x2, Mfun, cf);
         dx1 = reshape(dx(1:N), cf.Nx2, cf.Nx1);
         dx2 = reshape(dx(N+1:end), cf.Nx2, cf.Nx1);
     elseif cf.nonlinear == 1 || cf.nonlinear == 2
@@ -162,13 +152,6 @@ for iter = 1:cf.max_iter
         [x1, x2] = UpdateCorrection(x1, x2, boundary_points);
     end
 
-    %[L1, L2, Linf, gtilde2, sigma1, sigma2] = Cost(x1, x2, Mfun, cf.C);
-    %[L_exact,~,~,~] = CostExact(x1, x2, Mfun);
-    %cost_list = [cost_list, [L_exact; L1; L2; Linf; gtilde2]];
-    %disp([sigma1, sigma2]);
-    %param.sigma1 = sigma1;
-    %param.sigma2 = sigma2;
-
     
     if cf.animation == 1 && ~mod(iter,cf.iter_per_frame)
         figure(2)
@@ -203,16 +186,6 @@ for iter = 1:cf.max_iter
         semilogy(res_list); grid on
         title([cf.title_name, ' residual']); hold off
 
-        %figure(17); clf; set(gca, 'YScale', 'log');
-        %grid on; hold on;
-        %h1 = semilogy(cost_list(1,:)/cost_list(1,1),'-','LineWidth',1.5);
-        %h2 = semilogy(cost_list(2,:)/cost_list(2,1),'-','LineWidth',1.5);
-        %h3 = semilogy(cost_list(3,:)/cost_list(3,1),'-','LineWidth',1.5);
-        %h4 = semilogy(cost_list(4,:)/cost_list(4,1),'-','LineWidth',1.5);
-        %h5 = semilogy(cost_list(5,:),'-','LineWidth',1.5);
-        %legend([h1 h2 h3 h4 h5],{'L_exact','L1','L2','L∞','Ortho'},'Location','best');
-        %title([cf.title_name,' cost']);
-        %hold off;
     end
 
     
@@ -225,8 +198,6 @@ for iter = 1:cf.max_iter
         if ~isValid; disp('Warning: cell overlap expected'); end
     end
 
-    %disp(['Iteration: ', num2str(iter), ', Residual: ', num2str(res_list(end)), ...
-    %      ', Cost: ', num2str(cost_list(end))]);
 end
 
 if cf.save_output
