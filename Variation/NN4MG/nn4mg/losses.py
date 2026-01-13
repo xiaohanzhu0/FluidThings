@@ -57,7 +57,7 @@ def interior_loss(
     )
 
     integrand = (lam_xi**2) * q_xi + (lam_eta**2) * q_eta
-    loss = integrand.mean()
+    loss = 10000*integrand.mean()
 
     if w_det_barrier > 0.0:
         loss = loss + 1 * w_det_barrier * torch.nn.functional.cross_entropy(

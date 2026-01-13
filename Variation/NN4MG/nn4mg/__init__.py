@@ -4,7 +4,8 @@ from .boundary import BoundaryData, build_boundary_data
 from .losses import interior_loss, orth_loss_forward
 from .model import Model, init_model_weights
 from .train import train
-from .plot import plot_grid
+from .analysis import compute_misfit_field, compute_skewness
+from .plot import plot_grid, plot_scalar_field
 
 __all__ = [
     "load_grid_csv",
@@ -19,5 +20,8 @@ __all__ = [
     "Model",
     "init_model_weights",
     "train",
+    "compute_misfit_field",
+    "compute_skewness",
     "plot_grid",
+    "plot_scalar_field",
 ]
