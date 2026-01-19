@@ -1,11 +1,12 @@
 from .data import load_grid_csv, extract_boundaries
 from .metric import M_fun, M_fun_torch, M_fun_inv_torch
 from .boundary import BoundaryData, build_boundary_data
-from .losses import interior_loss, orth_loss_forward
+from .losses import interior_loss, orth_loss_forward, orth_loss_inverse
 from .model import Model, init_model_weights
 from .train import train
 from .analysis import compute_misfit_field, compute_skewness
 from .plot import plot_grid, plot_scalar_field
+from .save import prepare_run_dir, save_run
 
 __all__ = [
     "load_grid_csv",
@@ -17,6 +18,7 @@ __all__ = [
     "build_boundary_data",
     "interior_loss",
     "orth_loss_forward",
+    "orth_loss_inverse",
     "Model",
     "init_model_weights",
     "train",
@@ -24,4 +26,6 @@ __all__ = [
     "compute_skewness",
     "plot_grid",
     "plot_scalar_field",
+    "prepare_run_dir",
+    "save_run",
 ]

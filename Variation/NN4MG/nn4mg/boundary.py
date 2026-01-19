@@ -89,7 +89,7 @@ def normal_derivative(scalar, xy, n_hat):
     return (g * n_hat).sum(dim=1, keepdim=True)
 
 
-def boundary_loss(net, boundary: BoundaryData, Nb=256, w_dir=10.0, w_neu=1.0):
+def boundary_loss(net, boundary: BoundaryData, Nb=256, w_neu=1.0):
     xyS, nS = sample_boundary(boundary.south_xy, boundary.n_south, Nb)
     xyN, nN = sample_boundary(boundary.north_xy, boundary.n_north, Nb)
     xyW, nW = sample_boundary(boundary.west_xy, boundary.n_west, Nb)
@@ -100,17 +100,10 @@ def boundary_loss(net, boundary: BoundaryData, Nb=256, w_dir=10.0, w_neu=1.0):
     xyW = xyW.requires_grad_(True)
     xyE = xyE.requires_grad_(True)
 
-    xiS, etaS = net(xyS).split(1, dim=1)
-    xiN, etaN = net(xyN).split(1, dim=1)
-    xiW, etaW = net(xyW).split(1, dim=1)
-    xiE, etaE = net(xyE).split(1, dim=1)
-
-    L_dir = (
-        torch.nn.functional.mse_loss(etaS, torch.zeros_like(etaS))
-        + torch.nn.functional.mse_loss(etaN, torch.ones_like(etaN))
-        + torch.nn.functional.mse_loss(xiW, torch.zeros_like(xiW))
-        + torch.nn.functional.mse_loss(xiE, torch.ones_like(xiE))
-    )
+    xiS = net(xyS)[:, 0:1]
+    xiN = net(xyN)[:, 0:1]
+    etaW = net(xyW)[:, 1:2]
+    etaE = net(xyE)[:, 1:2]
 
     dxi_dn_S = normal_derivative(xiS, xyS, nS)
     dxi_dn_N = normal_derivative(xiN, xyN, nN)
@@ -124,7 +117,4 @@ def boundary_loss(net, boundary: BoundaryData, Nb=256, w_dir=10.0, w_neu=1.0):
         + (deta_dn_E**2).mean()
     )
 
-    return 0 * w_dir * L_dir + 1000000 * w_neu * L_neu, {
-        "L_dir": L_dir.detach(),
-        "L_neu": L_neu.detach(),
-    }
+    return w_neu * L_neu, {"L_neu": L_neu.detach()}

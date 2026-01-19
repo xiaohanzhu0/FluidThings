@@ -5,8 +5,31 @@ from .boundary import grad_wrt_xy
 
 
 def compute_misfit_field(
-    net, X1, X2, Minv_fn, device=None, dtype=None, lam_xi=1.0, lam_eta=1.0
+    net,
+    X1,
+    X2,
+    metric_fn=None,
+    metric_inv_fn=None,
+    Minv_fn=None,
+    device=None,
+    dtype=None,
+    lam_xi=1.0,
+    lam_eta=1.0,
+    lam_mode="fixed",
+    lam_detach=True,
+    lam_eps=1e-12,
+    formulation="dual",
+    eps_det=1e-8,
+    misfit_type="standard",
 ):
+    if metric_inv_fn is None and Minv_fn is not None:
+        metric_inv_fn = Minv_fn
+    if metric_fn is None and metric_inv_fn is None:
+        raise ValueError("metric_fn or metric_inv_fn must be provided.")
+    if formulation not in {"dual", "primal"}:
+        raise ValueError(f"Unknown formulation: {formulation}")
+    if lam_mode not in {"fixed", "eq9"}:
+        raise ValueError(f"Unknown lam_mode: {lam_mode}")
     if device is None:
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if dtype is None:
@@ -17,38 +40,81 @@ def compute_misfit_field(
     )
     xy = torch.from_numpy(xy).to(device=device, dtype=dtype).requires_grad_(True)
 
-    s = net(xy)
-    xi = s[:, 0:1]
-    eta = s[:, 1:2]
+    out = net(xy)
+    xi = out[:, 0:1]
+    eta = out[:, 1:2]
 
     g_xi = grad_wrt_xy(xi, xy)
     g_eta = grad_wrt_xy(eta, xy)
 
-    x = xy[:, 0]
-    y = xy[:, 1]
-    M11_inv, M12_inv, M22_inv = Minv_fn(x, y)
+    S11, S12 = g_xi[:, 0], g_xi[:, 1]
+    S21, S22 = g_eta[:, 0], g_eta[:, 1]
+    detS = S11 * S22 - S12 * S21
+    detS_pos = detS.clamp_min(eps_det)
 
-    def quadform_from_components(g, M11_inv, M12_inv, M22_inv):
+    if formulation == "dual":
+        metric_xy = xy
+        J = 1.0 / detS_pos
+    else:
+        metric_xy = out
+        J = None
+
+    x = metric_xy[:, 0]
+    y = metric_xy[:, 1]
+
+    def invert_metric_components(M11, M12, M22):
+        det = M11 * M22 - M12 * M12
+        return M22 / det, -M12 / det, M11 / det
+
+    if metric_fn is not None:
+        M11, M12, M22 = metric_fn(x, y)
+    else:
+        M11_inv, M12_inv, M22_inv = metric_inv_fn(x, y)
+        M11, M12, M22 = invert_metric_components(M11_inv, M12_inv, M22_inv)
+
+    if metric_inv_fn is not None:
+        M11_inv, M12_inv, M22_inv = metric_inv_fn(x, y)
+    else:
+        M11_inv, M12_inv, M22_inv = invert_metric_components(M11, M12, M22)
+
+    def quadform_from_components(g, M11, M12, M22):
         gx, gy = g[:, 0], g[:, 1]
-        M11 = M11_inv.squeeze(-1)
-        M12 = M12_inv.squeeze(-1)
-        M22 = M22_inv.squeeze(-1)
+        M11 = M11.squeeze(-1)
+        M12 = M12.squeeze(-1)
+        M22 = M22.squeeze(-1)
         return M11 * gx * gx + 2.0 * M12 * gx * gy + M22 * gy * gy
 
-    q_xi = quadform_from_components(
-        torch.cat((g_xi[:, 0:1], g_eta[:, 0:1]), dim=1),
-        M11_inv,
-        M12_inv,
-        M22_inv,
-    )
-    q_eta = quadform_from_components(
-        torch.cat((g_xi[:, 1:2], g_eta[:, 1:2]), dim=1),
-        M11_inv,
-        M12_inv,
-        M22_inv,
-    )
+    def sigma_from_q(q, eps):
+        num = q.abs().mean()
+        den = (q * q).mean().clamp_min(eps)
+        sigma = torch.sqrt(num / den)
+        return sigma.detach() if lam_detach else sigma
 
-    integrand = (lam_xi**2) * q_xi + (lam_eta**2) * q_eta
+    def misfit_terms(q_xi, q_eta, lam_xi, lam_eta, misfit_type):
+        if misfit_type == "standard":
+            return (lam_xi**2) * q_xi + (lam_eta**2) * q_eta
+        if misfit_type == "target1":
+            return (lam_xi**2 * q_xi - 1.0) ** 2 + (lam_eta**2 * q_eta - 1.0) ** 2
+        if misfit_type == "target2":
+            return torch.abs(lam_xi**2 * q_xi - 1.0) + torch.abs(lam_eta**2 * q_eta - 1.0)
+        raise ValueError(f"Unknown misfit_type: {misfit_type}")
+
+    if formulation == "primal":
+        col_s1 = torch.cat((g_xi[:, 0:1], g_eta[:, 0:1]), dim=1)
+        col_s2 = torch.cat((g_xi[:, 1:2], g_eta[:, 1:2]), dim=1)
+        q_xi = quadform_from_components(col_s1, M11, M12, M22)
+        q_eta = quadform_from_components(col_s2, M11, M12, M22)
+        if lam_mode == "eq9":
+            lam_xi = sigma_from_q(q_xi, lam_eps)
+            lam_eta = sigma_from_q(q_eta, lam_eps)
+        integrand = misfit_terms(q_xi, q_eta, lam_xi, lam_eta, misfit_type)
+    else:
+        q_xi = quadform_from_components(g_xi, M11_inv, M12_inv, M22_inv)
+        q_eta = quadform_from_components(g_eta, M11_inv, M12_inv, M22_inv)
+        if lam_mode == "eq9":
+            lam_xi = sigma_from_q(q_xi, lam_eps)
+            lam_eta = sigma_from_q(q_eta, lam_eps)
+        integrand = misfit_terms(q_xi, q_eta, lam_xi, lam_eta, misfit_type) * J
     return integrand.detach().cpu().numpy().reshape(X1.shape)
 
 

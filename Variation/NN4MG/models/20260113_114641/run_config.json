@@ -1,0 +1,32 @@
+{
+  "args": {
+    "N_bdry": 256,
+    "depth": 4,
+    "lr": 0.0005,
+    "no_show": false,
+    "plot_every": 0,
+    "plot_initial": false,
+    "problem": 1,
+    "save_plot": "",
+    "save_run_dir": "./models",
+    "save_run_name": "",
+    "steps": 50,
+    "width": 128,
+    "x1": "x1.csv",
+    "x2": "x2.csv"
+  },
+  "best_loss": 1275.443359375,
+  "model": {
+    "depth": 4,
+    "width": 128
+  },
+  "timestamp": "2026-01-13T16:46:41Z",
+  "train": {
+    "N_bdry": 256,
+    "device": "cpu",
+    "dtype": "torch.float32",
+    "lr": 0.0005,
+    "plot_every": null,
+    "steps": 50
+  }
+}

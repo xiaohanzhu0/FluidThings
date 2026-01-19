@@ -1,0 +1,50 @@
+{
+  "args": {
+    "N_bdry": 256,
+    "N_int": 4096,
+    "depth": 4,
+    "det_barrier_scale": 0.0,
+    "formulation": "primal",
+    "lr": 0.0005,
+    "misfit": "target1",
+    "mono_eps": 1e-05,
+    "no_show": false,
+    "plot_every": 0,
+    "plot_initial": false,
+    "problem": 1,
+    "sampling": 1,
+    "save_plot": "",
+    "save_run_dir": "./models",
+    "save_run_name": "",
+    "steps": 50,
+    "w_mono": 0.0,
+    "w_neu": 1.0,
+    "w_orth": 1.0,
+    "width": 128,
+    "x1": "/Users/zhuxiaohan/Documents/repo/Fluid/Variation/NN4MG/x1.csv",
+    "x2": "/Users/zhuxiaohan/Documents/repo/Fluid/Variation/NN4MG/x2.csv"
+  },
+  "best_loss": 5335083.0,
+  "model": {
+    "depth": 4,
+    "width": 128
+  },
+  "timestamp": "2026-01-17T22:07:20Z",
+  "train": {
+    "N_bdry": 256,
+    "N_int": 4096,
+    "det_barrier_scale": 0.0,
+    "device": "cpu",
+    "dtype": "torch.float32",
+    "formulation": "primal",
+    "lr": 0.0005,
+    "misfit_type": "target1",
+    "mono_eps": 1e-05,
+    "plot_every": null,
+    "sampling": 1,
+    "steps": 50,
+    "w_mono": 0.0,
+    "w_neu": 1.0,
+    "w_orth": 1.0
+  }
+}
