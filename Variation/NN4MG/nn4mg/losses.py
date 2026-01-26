@@ -20,6 +20,10 @@ def interior_loss(
     det_barrier_scale=100.0,
     det_target=1e-6,
     misfit_type="standard",
+    w_gradation=0.0,
+    gradation_eps=1e-12,
+    gradation_beta=0.0,
+    gradation_beta_weight=1.0,
 ):
     if metric_inv_fn is None and Minv_fn is not None:
         metric_inv_fn = Minv_fn
@@ -47,9 +51,11 @@ def interior_loss(
     if formulation == "dual":
         metric_xy = xy
         J = 1.0 / detS_pos
+        J_map = J
     else:
         metric_xy = out
         J = 1.0 / detS_pos
+        J_map = detS_pos
 
     x = metric_xy[:, 0]
     y = metric_xy[:, 1]
@@ -91,6 +97,11 @@ def interior_loss(
             return (lam_xi**2 * q_xi - 1.0) ** 2 + (lam_eta**2 * q_eta - 1.0) ** 2
         if misfit_type == "target2":
             return torch.abs((q_xi - q_xi.mean())/q_xi.mean()) + torch.abs((q_eta - q_eta.mean())/q_eta.mean())
+        if misfit_type == "target3":
+            aux_xi = (q_xi - q_xi.mean())/q_xi.mean()
+            aux_eta = (q_eta - q_eta.mean())/q_eta.mean()
+            return torch.nn.functional.softplus(aux_xi) + torch.nn.functional.softplus(-aux_xi) + \
+                   torch.nn.functional.softplus(aux_eta) + torch.nn.functional.softplus(-aux_eta) - 4*torch.log(torch.tensor(2))
         raise ValueError(f"Unknown misfit_type: {misfit_type}")
 
     if formulation == "primal":
@@ -111,6 +122,18 @@ def interior_loss(
         integrand = misfit_terms(q_xi, q_eta, lam_xi, lam_eta, misfit_type) * J
     loss = integrand.mean()
 
+    L_gradation = torch.zeros((), device=detS.device, dtype=detS.dtype)
+    if w_gradation > 0.0:
+        log_h = 0.5 * torch.log(J_map.clamp_min(gradation_eps))
+        grad_log_h = grad_wrt_xy(log_h, xy)
+        grad_mag = torch.sqrt((grad_log_h * grad_log_h).sum(dim=1) + gradation_eps)
+        L_gradation = (grad_mag * grad_mag).mean()
+        if gradation_beta > 0.0:
+            L_gradation = L_gradation + gradation_beta_weight * torch.nn.functional.softplus(
+                grad_mag - gradation_beta
+            ).pow(2).mean()
+        loss = loss + w_gradation * L_gradation
+
     if w_det_barrier > 0.0:
         loss = loss + det_barrier_scale * w_det_barrier * torch.nn.functional.cross_entropy(
             1 / detS, torch.tensor(1, device=detS.device)
@@ -119,7 +142,11 @@ def interior_loss(
     _ = J  # preserve original structure from the notebook
     _ = det_target
 
-    return loss, {"L_int": loss.detach()}
+    stats = {
+        "L_int": loss.detach(),
+        "L_gradation": L_gradation.detach(),
+    }
+    return loss, stats
 
 
 def orth_loss_forward(Fnet, se, eps=1e-12):

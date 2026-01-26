@@ -96,7 +96,12 @@ def compute_misfit_field(
         if misfit_type == "target1":
             return (lam_xi**2 * q_xi - 1.0) ** 2 + (lam_eta**2 * q_eta - 1.0) ** 2
         if misfit_type == "target2":
-            return torch.abs(lam_xi**2 * q_xi - 1.0) + torch.abs(lam_eta**2 * q_eta - 1.0)
+            return torch.abs((q_xi - q_xi.mean())/q_xi.mean()) + torch.abs((q_eta - q_eta.mean())/q_eta.mean())
+        if misfit_type == "target3":
+            aux_xi = (q_xi - q_xi.mean())/q_xi.mean()
+            aux_eta = (q_eta - q_eta.mean())/q_eta.mean()
+            return torch.nn.functional.softplus(aux_xi) + torch.nn.functional.softplus(-aux_xi) + \
+                   torch.nn.functional.softplus(aux_eta) + torch.nn.functional.softplus(-aux_eta) - 4*torch.log(torch.tensor(2))
         raise ValueError(f"Unknown misfit_type: {misfit_type}")
 
     if formulation == "primal":
@@ -148,3 +153,49 @@ def compute_skewness(X, Y, eps=1e-12):
     angle = np.degrees(np.arccos(cosang))
     skewness = np.abs(90.0 - angle)
     return skewness
+
+
+def compute_gradation_field(
+    net,
+    X1,
+    X2,
+    formulation="dual",
+    eps_det=1e-8,
+    gradation_eps=1e-12,
+    device=None,
+    dtype=None,
+):
+    if formulation not in {"dual", "primal"}:
+        raise ValueError(f"Unknown formulation: {formulation}")
+    if device is None:
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    if dtype is None:
+        dtype = torch.float32
+
+    xy = np.concatenate(
+        (X1.flatten().reshape(-1, 1), X2.flatten().reshape(-1, 1)), axis=1
+    )
+    xy = torch.from_numpy(xy).to(device=device, dtype=dtype).requires_grad_(True)
+
+    out = net(xy)
+    xi = out[:, 0:1]
+    eta = out[:, 1:2]
+
+    g_xi = grad_wrt_xy(xi, xy)
+    g_eta = grad_wrt_xy(eta, xy)
+
+    S11, S12 = g_xi[:, 0], g_xi[:, 1]
+    S21, S22 = g_eta[:, 0], g_eta[:, 1]
+    detS = S11 * S22 - S12 * S21
+    detS_pos = detS.clamp_min(eps_det)
+
+    if formulation == "dual":
+        J_map = 1.0 / detS_pos
+    else:
+        J_map = detS_pos
+
+    log_h = 0.5 * torch.log(J_map.clamp_min(gradation_eps))
+    grad_log_h = grad_wrt_xy(log_h, xy)
+    mag = torch.sqrt((grad_log_h * grad_log_h).sum(dim=1) + gradation_eps)
+
+    return mag.detach().cpu().numpy().reshape(X1.shape)

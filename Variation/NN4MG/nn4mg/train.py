@@ -42,7 +42,7 @@ def train(
     lr_final=None,
     lam_xi=1,
     lam_eta=1,
-    lam_mode="eq9",
+    lam_mode="fixed",
     lam_detach=True,
     lam_eps=1e-12,
     w_neu=100.0,
@@ -53,9 +53,13 @@ def train(
     w_orth=1.0,
     w_mono=0.0,
     mono_eps=1e-5,
+    w_gradation=0.0,
+    gradation_eps=1e-12,
+    gradation_beta=0.0,
+    gradation_beta_weight=1.0,
     det_barrier_scale=100.0,
     grad_clip=1.0,
-    log_every=1,
+    log_every=10,
     plot_every=None,
     device=None,
     dtype=None,
@@ -99,7 +103,14 @@ def train(
         return lr_final + (lr - lr_final) * (0.5 * (1.0 + math.cos(math.pi * progress)))
 
     best = {"loss": float("inf"), "state": None}
-    history = {"step": [], "L_int": [], "L_bdry": [], "L_orth": [], "L_total": []}
+    history = {
+        "step": [],
+        "L_int": [],
+        "L_bdry": [],
+        "L_orth": [],
+        "L_gradation": [],
+        "L_total": [],
+    }
 
     xy_plot = torch.from_numpy(
         np.concatenate((X1.flatten().reshape(-1, 1), X2.flatten().reshape(-1, 1)), axis=1)
@@ -132,6 +143,10 @@ def train(
             formulation=formulation,
             det_barrier_scale=det_barrier_scale,
             misfit_type=misfit_type,
+            w_gradation=w_gradation,
+            gradation_eps=gradation_eps,
+            gradation_beta=gradation_beta,
+            gradation_beta_weight=gradation_beta_weight,
         )
 
         L_bdry, stats_bdry = boundary_loss(net, boundary, Nb=N_bdry, w_neu=w_neu)
@@ -193,12 +208,14 @@ def train(
             L_orth = orth_loss_forward(net, xy_int)
         loss = loss + w_orth * L_orth
         L_int_val = stats_int["L_int"].item()
+        L_grad_val = (w_gradation * stats_int["L_gradation"]).item()
         L_bdry_val = L_bdry.detach().item()
-        L_orth_val = L_orth.detach().item()
+        L_orth_val = (w_orth * L_orth).detach().item()
         history["step"].append(step)
         history["L_int"].append(L_int_val)
         history["L_bdry"].append(L_bdry_val)
         history["L_orth"].append(L_orth_val)
+        history["L_gradation"].append(L_grad_val)
         history["L_total"].append(loss.item())
 
         opt.zero_grad(set_to_none=True)
@@ -221,7 +238,8 @@ def train(
                 f"loss {loss.item():.4e} | "
                 f"Lint {L_int_val:.3e} "
                 f"Lbdry {L_bdry_val:.3e} "
-                f"Lorth {L_orth_val:.3e} | "
+                f"Lorth {L_orth_val:.3e} "
+                f"Lgrad {L_grad_val:.3e} | "
             )
         if plot_every and step % plot_every == 0:
             from .plot import plot_grid

@@ -7,11 +7,13 @@ import matplotlib.pyplot as plt
 
 from nn4mg import (
     compute_misfit_field,
+    compute_gradation_field,
     compute_skewness,
     build_boundary_data,
     extract_boundaries,
     init_model_weights,
     load_grid_csv,
+    metric_fn_from_npz,
     M_fun_torch,
     M_fun_inv_torch,
     Model,
@@ -56,22 +58,33 @@ def main():
         default=1,
         help="Interior sampling mode: 0=grid, 1=uniform unit square.",
     )
-    parser.add_argument("--w-neu", type=float, default=1.0)
-    parser.add_argument("--w-orth", type=float, default=1.0)
+    parser.add_argument("--w-neu", type=float, default=10.0)
+    parser.add_argument("--w-orth", type=float, default=100.0)
     parser.add_argument("--w-mono", type=float, default=0.0)
     parser.add_argument("--mono-eps", type=float, default=1e-5)
+    parser.add_argument("--w-gradation", type=float, default=0.)
+    parser.add_argument("--gradation-beta", type=float, default=0.5)
+    parser.add_argument("--gradation-beta-weight", type=float, default=1.0)
     parser.add_argument("--det-barrier-scale", type=float, default=0.0)
     parser.add_argument(
         "--misfit",
-        choices=["standard", "target1","target2"],
+        choices=["standard", "target1", "target2"],
         default="target2",
         help=(
             "Misfit integrand: "
-            "standard=lam^2*q, target1=(lam^2*q-1)^2."
+            "standard=lam^2*q"
+            "target1=(lam^2*q-1)^2"
+            "target2=abs[(q-mean(q))/mean(q)]"
+            "target3=softplus_abs[(q-mean(q))/mean(q)]"
         ),
     )
     parser.add_argument(
         "--problem", type=int, default=2, help="Metric problem id (1 or 2)."
+    )
+    parser.add_argument(
+        "--metric-npz",
+        default="../data/metric_transform_output/Mp.npz",
+        help="Path to metric npz file (overrides --problem when provided).",
     )
     parser.add_argument(
         "--formulation",
@@ -114,11 +127,15 @@ def main():
     net = Model(width=args.width, depth=args.depth)
     init_model_weights(net)
 
-    def metric_fn_selected(x1, x2):
-        return M_fun_torch(x1, x2, problem=args.problem)
+    if args.metric_npz:
+        metric_fn_selected = metric_fn_from_npz(args.metric_npz)
+        metric_inv_fn_selected = None
+    else:
+        def metric_fn_selected(x1, x2):
+            return M_fun_torch(x1, x2, problem=args.problem)
 
-    def metric_inv_fn_selected(x1, x2):
-        return M_fun_inv_torch(x1, x2, problem=args.problem)
+        def metric_inv_fn_selected(x1, x2):
+            return M_fun_inv_torch(x1, x2, problem=args.problem)
 
     train_params = dict(
         steps=args.steps,
@@ -132,6 +149,9 @@ def main():
         w_orth=args.w_orth,
         w_mono=args.w_mono,
         mono_eps=args.mono_eps,
+        w_gradation=args.w_gradation,
+        gradation_beta=args.gradation_beta,
+        gradation_beta_weight=args.gradation_beta_weight,
         det_barrier_scale=args.det_barrier_scale,
         formulation=args.formulation,
         misfit_type=args.misfit,
@@ -157,12 +177,14 @@ def main():
         l_int = np.asarray(loss_history["L_int"], dtype=float)
         l_bdry = np.asarray(loss_history["L_bdry"], dtype=float)
         l_orth = np.asarray(loss_history["L_orth"], dtype=float)
+        l_grad = np.asarray(loss_history["L_gradation"], dtype=float)
         l_total = np.asarray(loss_history["L_total"], dtype=float)
         fig_loss, ax_loss = plt.subplots()
         ax_loss.plot(steps, l_total, label="total")
         ax_loss.plot(steps, l_int, label="interior")
         ax_loss.plot(steps, l_bdry, label="boundary")
         ax_loss.plot(steps, l_orth, label="orth")
+        ax_loss.plot(steps, l_grad, label="gradation")
         ax_loss.set_xlabel("Step")
         ax_loss.set_ylabel("Loss")
         ax_loss.set_yscale("log")
@@ -182,12 +204,14 @@ def main():
         save_run(run_dir, net, run_config)
         if loss_history:
             history_path = run_dir / "loss_history.txt"
-            history_table = np.column_stack((steps, l_total, l_int, l_bdry, l_orth))
+            history_table = np.column_stack(
+                (steps, l_total, l_int, l_bdry, l_orth, l_grad)
+            )
             np.savetxt(
                 history_path,
                 history_table,
-                header="step L_total L_int L_bdry L_orth",
-                fmt=["%d", "%.8e", "%.8e", "%.8e", "%.8e"],
+                header="step L_total L_int L_bdry L_orth L_gradation",
+                fmt=["%d", "%.8e", "%.8e", "%.8e", "%.8e", "%.8e"],
             )
         if fig_loss is not None:
             fig_loss.savefig(run_dir / "loss_history.png", bbox_inches="tight")
@@ -240,6 +264,27 @@ def main():
             f"(avg={skew_avg:.2f}, max={skew_max:.2f})"
         ),
         cmap="magma",
+    )
+
+    grad_field = compute_gradation_field(
+        net,
+        X1,
+        X2,
+        formulation=args.formulation,
+        device=device,
+        dtype=dtype,
+    )
+    grad_avg = float(np.mean(grad_field))
+    grad_max = float(np.max(grad_field))
+    plot_scalar_field(
+        X,
+        Y,
+        grad_field,
+        title=(
+            "Gradation magnitude |grad log h| "
+            f"(avg={grad_avg:.3e}, max={grad_max:.3e})"
+        ),
+        cmap="inferno",
     )
     if not args.no_show:
         plt.show()
