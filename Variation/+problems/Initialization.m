@@ -20,13 +20,7 @@ function [x1,x2,M11_fun,M12_fun,M22_fun] = Initialization(problem,Nx1,Nx2)
         M22_fun = @(x1,x2) 400;
         M12_fun = @(x1,x2) 0;
     elseif problem == 5
-        cf.grade = 1;
-        cf.new_airfoil = 1;
-        cf.metric_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/metricField.fields';
-        cf.airfoil_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/airfoil_18M_coarseIJK.grid';
-        cf.Nx1 = Nx1; cf.Nx2 = Nx2;
-        cf.alpha = 1.005;
-        cf.append_trail = 1;
+        cf = meshgen.defaults_dual(struct('problemId', 5, 'Nx1', Nx1, 'Nx2', Nx2));
         [x1, x2, M11_fun, M12_fun, M22_fun] = problems.InitProb5(cf);
     elseif problem == 6
         [x1,x2] = problems.InitProb6(Nx1,Nx2);
@@ -35,9 +29,7 @@ function [x1,x2,M11_fun,M12_fun,M22_fun] = Initialization(problem,Nx1,Nx2)
         [x1,x2] = problems.InitProb8(Nx1,Nx2);
         Mfun = @(x1,x2) problems.Prob8Metric(x1, x2);
     elseif problem == 9
-        cf.block_idx = 5;
-        cf.metric_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/metricField.fields';
-        cf.airfoil_datapath = '~/Files/data/Mesh_Generation/Airfoil/foil2/airfoil_18M_coarseIJK.grid';
+        cf = meshgen.defaults_dual(struct('problemId', 9));
         [x1, x2, M11_fun,M12_fun,M22_fun] = problems.InitProb9(cf);
     end
 end
