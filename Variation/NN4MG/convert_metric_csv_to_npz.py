@@ -4,6 +4,8 @@ from pathlib import Path
 
 import numpy as np
 
+DATA_DIR_NAME = "harmonic_transform_output"
+
 
 def _normalize_delimiter(raw):
     if raw is None:
@@ -66,27 +68,28 @@ def main():
             "into .npz bundles for NN4MG."
         )
     )
-    parser.add_argument("--m11", default="./data/harmonic_transform_output/Mp11.txt", help="Path to Mp11 csv/txt file.")
-    parser.add_argument("--m12", default="./data/harmonic_transform_output/Mp12.txt", help="Path to Mp12 csv/txt file.")
-    parser.add_argument("--m22", default="./data/harmonic_transform_output/Mp22.txt", help="Path to Mp22 csv/txt file.")
-    parser.add_argument("--phys-m11", default="./data/harmonic_transform_output/M11.txt", help="Path to M11 csv/txt file.")
-    parser.add_argument("--phys-m12", default="./data/harmonic_transform_output/M12.txt", help="Path to M12 csv/txt file.")
-    parser.add_argument("--phys-m22", default="./data/harmonic_transform_output/M22.txt", help="Path to M22 csv/txt file.")
-    parser.add_argument("--x1", default="./data/harmonic_transform_output/x1.txt", help="Path to x1 csv/txt file.")
-    parser.add_argument("--x2", default="./data/harmonic_transform_output/x2.txt", help="Path to x2 csv/txt file.")
+    data_dir = f"./data/harmonic_block9"
+    parser.add_argument("--m11", default=f"{data_dir}/Mp11.txt", help="Path to Mp11 csv/txt file.")
+    parser.add_argument("--m12", default=f"{data_dir}/Mp12.txt", help="Path to Mp12 csv/txt file.")
+    parser.add_argument("--m22", default=f"{data_dir}/Mp22.txt", help="Path to Mp22 csv/txt file.")
+    parser.add_argument("--phys-m11", default=f"{data_dir}/M11.txt", help="Path to M11 csv/txt file.")
+    parser.add_argument("--phys-m12", default=f"{data_dir}/M12.txt", help="Path to M12 csv/txt file.")
+    parser.add_argument("--phys-m22", default=f"{data_dir}/M22.txt", help="Path to M22 csv/txt file.")
+    parser.add_argument("--x1", default=f"{data_dir}/x1.txt", help="Path to x1 csv/txt file.")
+    parser.add_argument("--x2", default=f"{data_dir}/x2.txt", help="Path to x2 csv/txt file.")
     parser.add_argument(
         "--output",
-        default="./data/harmonic_transform_output/Mp.npz",
+        default=f"{data_dir}/Mp.npz",
         help="Output .npz file path for the parametrized-space metric.",
     )
     parser.add_argument(
         "--phys-output",
-        default="./data/harmonic_transform_output/M.npz",
+        default=f"{data_dir}/M.npz",
         help="Output .npz file path for the physical-space metric.",
     )
     parser.add_argument(
         "--grid-output",
-        default="./data/harmonic_transform_output/X.npz",
+        default=f"{data_dir}/X.npz",
         help="Output .npz file path for grid locations.",
     )
     parser.add_argument(

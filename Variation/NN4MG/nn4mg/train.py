@@ -43,7 +43,7 @@ def train(
     lam_xi=1,
     lam_eta=1,
     lam_mode="fixed",
-    lam_detach=True,
+    lam_detach=False,
     lam_eps=1e-12,
     w_neu=100.0,
     w_det_init=0.1,

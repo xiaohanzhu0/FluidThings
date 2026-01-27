@@ -92,7 +92,7 @@ def interior_loss(
     
     def misfit_terms(q_xi, q_eta, lam_xi, lam_eta, misfit_type):
         if misfit_type == "standard":
-            return ((lam_xi**2) * q_xi)**1 + ((lam_eta**2) * q_eta)**1
+            return (lam_xi**2) * q_xi + (lam_eta**2) * q_eta
         if misfit_type == "target1":
             return (lam_xi**2 * q_xi - 1.0) ** 2 + (lam_eta**2 * q_eta - 1.0) ** 2
         if misfit_type == "target2":

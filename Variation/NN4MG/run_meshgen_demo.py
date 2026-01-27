@@ -34,8 +34,8 @@ def main():
     )
     parser.add_argument("--x1", default=str(default_x1), help="Path to x1.csv")
     parser.add_argument("--x2", default=str(default_x2), help="Path to x2.csv")
-    parser.add_argument("--steps", type=int, default=500)
-    parser.add_argument("--lr", type=float, default=5e-3)
+    parser.add_argument("--steps", type=int, default=200)
+    parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument(
         "--lr-schedule",
         choices=["constant", "linear", "cosine"],
@@ -58,18 +58,18 @@ def main():
         default=1,
         help="Interior sampling mode: 0=grid, 1=uniform unit square.",
     )
-    parser.add_argument("--w-neu", type=float, default=10.0)
-    parser.add_argument("--w-orth", type=float, default=100.0)
+    parser.add_argument("--w-neu", type=float, default=0.0)
+    parser.add_argument("--w-orth", type=float, default=0.0)
     parser.add_argument("--w-mono", type=float, default=0.0)
     parser.add_argument("--mono-eps", type=float, default=1e-5)
     parser.add_argument("--w-gradation", type=float, default=0.)
     parser.add_argument("--gradation-beta", type=float, default=0.5)
     parser.add_argument("--gradation-beta-weight", type=float, default=1.0)
-    parser.add_argument("--det-barrier-scale", type=float, default=0.0)
+    parser.add_argument("--det-barrier-scale", type=float, default=1.0)
     parser.add_argument(
         "--misfit",
         choices=["standard", "target1", "target2"],
-        default="target2",
+        default="standard",
         help=(
             "Misfit integrand: "
             "standard=lam^2*q"
@@ -83,7 +83,7 @@ def main():
     )
     parser.add_argument(
         "--metric-npz",
-        default="../data/metric_transform_output/Mp.npz",
+        default="./data/harmonic_block9/Mp.npz",
         help="Path to metric npz file (overrides --problem when provided).",
     )
     parser.add_argument(
@@ -98,7 +98,7 @@ def main():
     parser.add_argument("--save-plot", default="", help="Save final grid plot to file.")
     parser.add_argument(
         "--save-run-dir",
-        default="./models",
+        default="",
         help="Save model/config to a new subdir under this path.",
     )
     parser.add_argument(

@@ -8,7 +8,7 @@ function [metric, update_history] = apply_metric_gradation(x_metric, y_metric, m
         params.beta = 1.002;
     end
     if ~isfield(params, 'grade_iterations') || isempty(params.grade_iterations)
-        params.grade_iterations = 20;
+        params.grade_iterations = 0;
     end
     if ~isfield(params, 'omega') || isempty(params.omega)
         params.omega = 1;

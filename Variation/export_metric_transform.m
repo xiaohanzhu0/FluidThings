@@ -1,7 +1,7 @@
 clear
 % Export harmonic-transformed metric tensor to text files.
 if ~exist('output_dir', 'var') || isempty(output_dir)
-    output_dir = fullfile(pwd, 'data/hyperbolic_transform_output');
+    output_dir = fullfile(pwd, 'data/harmonic_block9');
 end
 
 if ~exist('params', 'var') || isempty(params)
@@ -10,12 +10,23 @@ end
 params = meshgen.defaults_dual(params);
 
 [x1, x2, M11_fun, M12_fun, M22_fun, boundary_points] = meshgen.problems.init_dual(params);
-%[x1, x2] = meshgen.formulations.dual_harmonic_map(x1, x2, boundary_points, params);
+if params.with_harmonic_init
+    [x1, x2] = meshgen.formulations.dual_harmonic_map(x1, x2, boundary_points, params);
+end
 metric_data = meshgen.formulations.metric_transform_harmonic(x1, x2, M11_fun, M12_fun, M22_fun, params);
 
 if ~isfolder(output_dir)
     mkdir(output_dir);
 end
+
+hyperparam_path = fullfile(output_dir, 'hyperparameters.txt');
+param_text = evalc('disp(params)');
+fid = fopen(hyperparam_path, 'w');
+if fid == -1
+    error(['Unable to open hyperparameter file for writing: ', hyperparam_path]);
+end
+fwrite(fid, param_text);
+fclose(fid);
 
 M11 = metric_data.M11;
 M12 = metric_data.M12;
