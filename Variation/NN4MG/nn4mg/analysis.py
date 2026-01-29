@@ -195,7 +195,15 @@ def compute_gradation_field(
         J_map = detS_pos
 
     log_h = 0.5 * torch.log(J_map.clamp_min(gradation_eps))
-    grad_log_h = grad_wrt_xy(log_h, xy)
+    grad_log_h = torch.autograd.grad(
+        outputs=log_h.sum(),
+        inputs=xy,
+        create_graph=True,
+        retain_graph=True,
+        allow_unused=True,
+    )[0]
+    if grad_log_h is None:
+        grad_log_h = torch.zeros_like(xy)
     mag = torch.sqrt((grad_log_h * grad_log_h).sum(dim=1) + gradation_eps)
 
     return mag.detach().cpu().numpy().reshape(X1.shape)

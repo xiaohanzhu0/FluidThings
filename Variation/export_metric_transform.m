@@ -3,6 +3,9 @@ clear
 if ~exist('output_dir', 'var') || isempty(output_dir)
     output_dir = fullfile(pwd, 'data/harmonic_block9');
 end
+if ~exist('save_figures', 'var') || isempty(save_figures)
+    save_figures = 1;
+end
 
 if ~exist('params', 'var') || isempty(params)
     params = struct();
@@ -18,6 +21,13 @@ metric_data = meshgen.formulations.metric_transform_harmonic(x1, x2, M11_fun, M1
 if ~isfolder(output_dir)
     mkdir(output_dir);
 end
+figures_dir = '';
+if save_figures
+    figures_dir = fullfile(pwd, 'figures', datestr(now, 'yyyymmdd_HHMMSS'));
+    if ~isfolder(figures_dir)
+        mkdir(figures_dir);
+    end
+end
 
 hyperparam_path = fullfile(output_dir, 'hyperparameters.txt');
 param_text = evalc('disp(params)');
@@ -27,6 +37,15 @@ if fid == -1
 end
 fwrite(fid, param_text);
 fclose(fid);
+if save_figures
+    hyperparam_fig_path = fullfile(figures_dir, 'hyperparameters.txt');
+    fid = fopen(hyperparam_fig_path, 'w');
+    if fid == -1
+        error(['Unable to open hyperparameter file for writing: ', hyperparam_fig_path]);
+    end
+    fwrite(fid, param_text);
+    fclose(fid);
+end
 
 M11 = metric_data.M11;
 M12 = metric_data.M12;
@@ -53,7 +72,7 @@ else
     X2 = x2;
 end
 
-figure('Name', 'Metric Components', 'Color', 'w');
+fig_components = figure('Name', 'Metric Components', 'Color', 'w');
 subplot(1, 3, 1);
 pcolor(X1, X2, M11);
 shading interp;
@@ -84,7 +103,7 @@ xu = linspace(0, 1, n_cols);
 yu = linspace(0, 1, n_rows);
 [Xu, Yu] = meshgrid(xu, yu);
 
-figure('Name', 'Metric Components (Unit Square)', 'Color', 'w');
+fig_components_unit = figure('Name', 'Metric Components (Unit Square)', 'Color', 'w');
 subplot(1, 3, 1);
 pcolor(Xu, Yu, Mp11);
 shading interp;
@@ -137,22 +156,24 @@ v2y = v1x;
 
 lam1 = max(lam1, 0);
 lam2 = max(lam2, 0);
-s1 = sqrt(lam1);
-s2 = sqrt(lam2);
+s1 = sqrt(lam1) / 1e6;
+s2 = sqrt(lam2) / 1e6;
 e1x = v1x .* s1;
 e1y = v1y .* s1;
 e2x = v2x .* s2;
 e2y = v2y .* s2;
 
-step = max(floor(min(size(Mp11)) / 25), 1);
-Xs = X1(1:step:end, 1:step:end);
-Ys = X2(1:step:end, 1:step:end);
-e1x_s = e1x(1:step:end, 1:step:end);
-e1y_s = e1y(1:step:end, 1:step:end);
-e2x_s = e2x(1:step:end, 1:step:end);
-e2y_s = e2y(1:step:end, 1:step:end);
 
-figure('Name', 'Metric Eigenvectors', 'Color', 'w');
+stride = 3;
+
+Xs = X1(1:stride:end, 1:stride:end);
+Ys = X2(1:stride:end, 1:stride:end);
+e1x_s = e1x(1:stride:end, 1:stride:end);
+e1y_s = e1y(1:stride:end, 1:stride:end);
+e2x_s = e2x(1:stride:end, 1:stride:end);
+e2y_s = e2y(1:stride:end, 1:stride:end);
+
+fig_eigenvectors = figure('Name', 'Metric Eigenvectors', 'Color', 'w');
 quiver(Xs, Ys, e1x_s, e1y_s, 0, 'Color', [0.0 0.45 0.74]);
 hold on;
 quiver(Xs, Ys, e2x_s, e2y_s, 0, 'Color', [0.85 0.33 0.10]);
@@ -160,3 +181,40 @@ hold off;
 axis equal tight;
 title('Eigenvectors scaled by sqrt(eigenvalues)');
 xlabel('x'); ylabel('y');
+
+% Rectangles aligned with eigenvectors and side lengths scaled by sqrt(eigenvalues).
+v1x_s = v1x(1:stride:end, 1:stride:end);
+v1y_s = v1y(1:stride:end, 1:stride:end);
+v2x_s = v2x(1:stride:end, 1:stride:end);
+v2y_s = v2y(1:stride:end, 1:stride:end);
+s1_s = s1(1:stride:end, 1:stride:end);
+s2_s = s2(1:stride:end, 1:stride:end);
+
+fig_rectangles = figure('Name', 'Metric Rectangles', 'Color', 'w');
+hold on;
+edge_color = [0.2 0.2 0.2];
+for idx = 1:numel(Xs)
+    cx = Xs(idx);
+    cy = Ys(idx);
+    h1 = 0.5 * s1_s(idx);
+    h2 = 0.5 * s2_s(idx);
+    dx1 = h1 * v1x_s(idx);
+    dy1 = h1 * v1y_s(idx);
+    dx2 = h2 * v2x_s(idx);
+    dy2 = h2 * v2y_s(idx);
+    xverts = [cx - dx1 - dx2, cx + dx1 - dx2, cx + dx1 + dx2, cx - dx1 + dx2, cx - dx1 - dx2];
+    yverts = [cy - dy1 - dy2, cy + dy1 - dy2, cy + dy1 + dy2, cy - dy1 + dy2, cy - dy1 - dy2];
+    plot(xverts, yverts, 'Color', edge_color);
+end
+hold off;
+axis equal tight;
+title('Rectangles aligned with eigenvectors (side lengths = sqrt(eigenvalues))');
+xlabel('x'); ylabel('y');
+
+if save_figures
+    saveas(fig_components, fullfile(figures_dir, 'metric_components.png'));
+    saveas(fig_components_unit, fullfile(figures_dir, 'metric_components_unit_square.png'));
+    saveas(fig_eigenvectors, fullfile(figures_dir, 'metric_eigenvectors.png'));
+    saveas(fig_rectangles, fullfile(figures_dir, 'metric_rectangles.png'));
+    disp(['Saved figures to: ', figures_dir]);
+end

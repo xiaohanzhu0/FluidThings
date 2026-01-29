@@ -1,4 +1,4 @@
-function [metric, update_history] = apply_metric_gradation(x_metric, y_metric, metric, params)
+function [metric, update_history] = metric_gradation1(x_metric, y_metric, metric, params)
 %APPLY_METRIC_GRADATION Apply local gradation to a structured metric field.
 % Returns update_history to show whether each outer iteration changed M.
     if nargin < 4 || isempty(params)
