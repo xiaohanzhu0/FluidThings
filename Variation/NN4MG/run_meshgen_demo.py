@@ -12,16 +12,19 @@ from nn4mg import (
     build_boundary_data,
     extract_boundaries,
     init_model_weights,
+    init_decoupled_model_weights,
     load_grid_csv,
     metric_fn_from_npz,
     M_fun_torch,
     M_fun_inv_torch,
     Model,
+    DecoupledMonotonicModel,
     plot_grid,
     plot_scalar_field,
     prepare_run_dir,
     save_run,
     train,
+    train_decoupled,
 )
 
 
@@ -34,7 +37,7 @@ def main():
     )
     parser.add_argument("--x1", default=str(default_x1), help="Path to x1.csv")
     parser.add_argument("--x2", default=str(default_x2), help="Path to x2.csv")
-    parser.add_argument("--steps", type=int, default=500)
+    parser.add_argument("--steps", type=int, default=50)
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument(
         "--lr-schedule",
@@ -50,6 +53,18 @@ def main():
     )
     parser.add_argument("--width", type=int, default=64)
     parser.add_argument("--depth", type=int, default=4)
+    parser.add_argument(
+        "--model",
+        choices=["coupled", "decoupled"],
+        default="decoupled",
+        help="Model type: coupled (2D residual) or decoupled (1D monotonic).",
+    )
+    parser.add_argument(
+        "--quad-points",
+        type=int,
+        default=8,
+        help="Quadrature points for decoupled model integration.",
+    )
     parser.add_argument("--N-int", type=int, default=4096*2)
     parser.add_argument("--N-bdry", type=int, default=256)
     parser.add_argument(
@@ -83,7 +98,7 @@ def main():
     )
     parser.add_argument(
         "--metric-npz",
-        default="./data/harmonic_block6/Mp.npz",
+        default="./data/harmonic_block9/Mp.npz",
         help="Path to metric npz file (overrides --problem when provided).",
     )
     parser.add_argument(
@@ -120,12 +135,20 @@ def main():
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     dtype = torch.float32
-    boundary = build_boundary_data(
-        south_np, north_np, west_np, east_np, device=device, dtype=dtype
-    )
-
-    net = Model(width=args.width, depth=args.depth)
-    init_model_weights(net)
+    if args.model == "coupled":
+        boundary = build_boundary_data(
+            south_np, north_np, west_np, east_np, device=device, dtype=dtype
+        )
+        net = Model(width=args.width, depth=args.depth)
+        init_model_weights(net)
+    else:
+        boundary = None
+        net = DecoupledMonotonicModel(
+            width=args.width,
+            depth=args.depth,
+            quadrature_points=args.quad_points,
+        )
+        init_decoupled_model_weights(net)
 
     if args.metric_npz:
         metric_fn_selected = metric_fn_from_npz(args.metric_npz)
@@ -137,22 +160,12 @@ def main():
         def metric_inv_fn_selected(x1, x2):
             return M_fun_inv_torch(x1, x2, problem=args.problem)
 
-    train_params = dict(
+    train_params_common = dict(
         steps=args.steps,
         N_int=args.N_int,
-        N_bdry=args.N_bdry,
         lr=args.lr,
         lr_schedule=args.lr_schedule,
         lr_final=args.lr_final,
-        plot_every=args.plot_every or None,
-        w_neu=args.w_neu,
-        w_orth=args.w_orth,
-        w_mono=args.w_mono,
-        mono_eps=args.mono_eps,
-        w_gradation=args.w_gradation,
-        gradation_beta=args.gradation_beta,
-        gradation_beta_weight=args.gradation_beta_weight,
-        det_barrier_scale=args.det_barrier_scale,
         formulation=args.formulation,
         misfit_type=args.misfit,
         sampling=args.sampling,
@@ -160,31 +173,58 @@ def main():
         dtype=dtype,
     )
 
-    net, best = train(
-        net,
-        X1,
-        X2,
-        boundary,
-        metric_fn_selected,
-        metric_inv_fn=metric_inv_fn_selected,
-        **train_params,
-    )
+    if args.model == "coupled":
+        train_params = dict(
+            **train_params_common,
+            N_bdry=args.N_bdry,
+            plot_every=args.plot_every or None,
+            w_neu=args.w_neu,
+            w_orth=args.w_orth,
+            w_mono=args.w_mono,
+            mono_eps=args.mono_eps,
+            w_gradation=args.w_gradation,
+            gradation_beta=args.gradation_beta,
+            gradation_beta_weight=args.gradation_beta_weight,
+            det_barrier_scale=args.det_barrier_scale,
+        )
+        net, best = train(
+            net,
+            X1,
+            X2,
+            boundary,
+            metric_fn_selected,
+            metric_inv_fn=metric_inv_fn_selected,
+            **train_params,
+        )
+    else:
+        train_params = dict(**train_params_common)
+        net, best = train_decoupled(
+            net,
+            X1,
+            X2,
+            metric_fn_selected,
+            metric_inv_fn=metric_inv_fn_selected,
+            **train_params,
+        )
 
     loss_history = best.get("history")
     fig_loss = None
     if loss_history:
         steps = np.asarray(loss_history["step"], dtype=int)
         l_int = np.asarray(loss_history["L_int"], dtype=float)
-        l_bdry = np.asarray(loss_history["L_bdry"], dtype=float)
-        l_orth = np.asarray(loss_history["L_orth"], dtype=float)
-        l_grad = np.asarray(loss_history["L_gradation"], dtype=float)
         l_total = np.asarray(loss_history["L_total"], dtype=float)
         fig_loss, ax_loss = plt.subplots()
         ax_loss.plot(steps, l_total, label="total")
         ax_loss.plot(steps, l_int, label="interior")
-        ax_loss.plot(steps, l_bdry, label="boundary")
-        ax_loss.plot(steps, l_orth, label="orth")
-        ax_loss.plot(steps, l_grad, label="gradation")
+        if "L_bdry" in loss_history:
+            l_bdry = np.asarray(loss_history["L_bdry"], dtype=float)
+            ax_loss.plot(steps, l_bdry, label="boundary")
+        if "L_orth" in loss_history:
+            l_orth = np.asarray(loss_history["L_orth"], dtype=float)
+            ax_loss.plot(steps, l_orth, label="orth")
+        if "L_gradation" in loss_history:
+            l_grad = np.asarray(loss_history["L_gradation"], dtype=float)
+            ax_loss.plot(steps, l_grad, label="gradation")
         ax_loss.set_xlabel("Step")
         ax_loss.set_ylabel("Loss")
         ax_loss.set_yscale("log")
@@ -197,21 +237,35 @@ def main():
         run_config = {
             "args": vars(args),
             "train": train_params,
-            "model": {"width": args.width, "depth": args.depth},
+            "model": {
+                "type": args.model,
+                "width": args.width,
+                "depth": args.depth,
+                "quad_points": args.quad_points if args.model == "decoupled" else None,
+            },
             "best_loss": best["loss"],
             "timestamp": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
         }
         save_run(run_dir, net, run_config)
         if loss_history:
             history_path = run_dir / "loss_history.txt"
-            history_table = np.column_stack(
-                (steps, l_total, l_int, l_bdry, l_orth, l_grad)
-            )
+            columns = [steps, l_total, l_int]
+            header = ["step", "L_total", "L_int"]
+            if "L_bdry" in loss_history:
+                columns.append(np.asarray(loss_history["L_bdry"], dtype=float))
+                header.append("L_bdry")
+            if "L_orth" in loss_history:
+                columns.append(np.asarray(loss_history["L_orth"], dtype=float))
+                header.append("L_orth")
+            if "L_gradation" in loss_history:
+                columns.append(np.asarray(loss_history["L_gradation"], dtype=float))
+                header.append("L_gradation")
+            history_table = np.column_stack(columns)
             np.savetxt(
                 history_path,
                 history_table,
-                header="step L_total L_int L_bdry L_orth L_gradation",
-                fmt=["%d", "%.8e", "%.8e", "%.8e", "%.8e", "%.8e"],
+                header=" ".join(header),
+                fmt=["%d"] + ["%.8e"] * (len(header) - 1),
             )
         if fig_loss is not None:
             fig_loss.savefig(run_dir / "loss_history.png", bbox_inches="tight")

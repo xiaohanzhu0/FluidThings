@@ -37,8 +37,11 @@ function [T1, T2, M11_fun, M12_fun, M22_fun] = InitProb5(cf)
     
     
     %% Gradation to regularize the metric field
-    if cf.grade
-        M_samp.metric = problems.apply_metric_gradation(...
+    if cf.grade == 1
+        [M_samp.metric, update_history] = problems.metric_gradation1(...
+            M_samp.x_metric, M_samp.y_metric, M_samp.metric,cf);
+    elseif cf.grade == 2
+        M_samp.metric = problems.metric_gradation2(...
             M_samp.x_metric, M_samp.y_metric, M_samp.metric,cf);
     end
 
